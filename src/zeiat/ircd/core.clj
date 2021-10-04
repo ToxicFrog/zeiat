@@ -1,13 +1,11 @@
-(ns hangbrain.zeiat.ircd.core
+(ns zeiat.ircd.core
   "Core functions for the ircd."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
-  (:require [clojure.pprint :refer [pprint]])
   (:require
-    [taoensso.timbre :as log]
-    [hangbrain.zeiat.types :refer [TranslatorState TranslatorAgent]]
+    [clojure.string :as string]
+    [zeiat.types :refer [TranslatorState]]
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
-    [io.aviso.exception :refer [write-exception]]
-    [clojure.string :as string]))
+    [taoensso.timbre :as log]))
 
 (def ^:dynamic *state* nil)
 

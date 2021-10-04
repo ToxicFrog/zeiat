@@ -1,4 +1,4 @@
-(ns hangbrain.zeiat.backend
+(ns zeiat.backend
   "Schema and protocol definitions for Zeiat backends. If implementing a new backend, you should start here."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require

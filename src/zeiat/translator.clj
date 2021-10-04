@@ -1,11 +1,11 @@
-(ns hangbrain.zeiat.translator
+(ns zeiat.translator
   "The translator agent implementation. This handles processing commands and refreshing the backend."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
-    [hangbrain.zeiat.types :refer [TranslatorState]]
-    [hangbrain.zeiat.backend :as backend :refer [AnyName]]
+    [zeiat.backend :as backend :refer [AnyName]]
+    [zeiat.ircd.core :refer [*state* privmsg]]
+    [zeiat.types :refer [TranslatorState]]
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
-    [hangbrain.zeiat.ircd.core :refer [*state* privmsg]]
     [taoensso.timbre :as log]
     ))
 

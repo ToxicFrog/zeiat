@@ -1,12 +1,10 @@
-(ns hangbrain.zeiat.ircd.list
+(ns zeiat.ircd.list
   "Channel-management commands for the ircd interface."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
-    [hangbrain.zeiat.ircd.core :as ircd :refer [message *state* numeric]]
-    [hangbrain.zeiat.backend :as backend]
-    [taoensso.timbre :as log]
+    [zeiat.backend :as backend]
+    [zeiat.ircd.core :as ircd :refer [message *state* numeric]]
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
-    [clojure.string :as string]
     ))
 
 ; TODO: we need to figure out what the datashape of a chat really is

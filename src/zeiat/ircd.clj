@@ -1,12 +1,12 @@
-(ns hangbrain.zeiat.ircd
+(ns zeiat.ircd
   "Proxy module that loads all the modules making up the IRCD engine and exports the 'dispatch-message function to send events to it. It also includes some functions for parsing IRC traffic."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
-    [hangbrain.zeiat.ircd.core :as ircd-core]
-    [hangbrain.zeiat.ircd.user]
-    [hangbrain.zeiat.ircd.channels]
-    [hangbrain.zeiat.ircd.messages]
-    [hangbrain.zeiat.ircd.list]
+    [zeiat.ircd.core :as ircd-core]
+    [zeiat.ircd.user]
+    [zeiat.ircd.channels]
+    [zeiat.ircd.messages]
+    [zeiat.ircd.list]
     [taoensso.timbre :as log]
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [clojure.string :as string]

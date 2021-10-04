@@ -1,12 +1,12 @@
-(ns hangbrain.zeiat.ircd.channels
+(ns zeiat.ircd.channels
   "Channel-management commands for the ircd interface."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
-    [hangbrain.zeiat.ircd.core :as ircd :refer [message *state* numeric reply-from]]
-    [hangbrain.zeiat.backend :as backend]
-    [taoensso.timbre :as log]
-    [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [clojure.string :as string]
+    [zeiat.backend :as backend]
+    [zeiat.ircd.core :as ircd :refer [message *state* numeric reply-from]]
+    [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
+    [taoensso.timbre :as log]
     ))
 
 ; How much space does a names line take up? Sum of length of individual names

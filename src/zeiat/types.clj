@@ -1,9 +1,9 @@
-(ns hangbrain.zeiat.types
+(ns zeiat.types
   "Schema type definitions for the Zeiat library."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
+    [zeiat.backend :as backend]
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
-    [hangbrain.zeiat.backend :as backend]
     ))
 
 (defschema ZeiatBackend

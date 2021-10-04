@@ -1,12 +1,11 @@
-(ns hangbrain.zeiat.ircd.user
+(ns zeiat.ircd.user
   "User-management commands for the ircd interface."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
-    [hangbrain.zeiat.ircd.core :as ircd :refer [message *state* reply-from numeric]]
-    [hangbrain.zeiat.translator :as translator]
-    [hangbrain.zeiat.types :refer [TranslatorState]]
+    [zeiat.ircd.core :as ircd :refer [message *state* reply-from numeric]]
+    [zeiat.translator :as translator]
+    [zeiat.types :refer [TranslatorState]]
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
-    [clojure.string :as string]
     ))
 
 ;;; Client Management

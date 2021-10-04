@@ -1,9 +1,6 @@
 # zeiat
-[![Build Status](https://travis-ci.org/toxicfrog/zeiat.svg?branch=master)](https://travis-ci.org/toxicfrog/zeiat)
-[![codecov](https://codecov.io/gh/toxicfrog/zeiat/branch/master/graph/badge.svg)](https://codecov.io/gh/toxicfrog/zeiat)
-[![Clojars Project](https://img.shields.io/clojars/v/zeiat.svg)](https://clojars.org/zeiat)
 
-A Clojure library designed to ... well, that part is up to you.
+A Clojure library for wiring up IRC to other protocols. Zeiat provides an RFC2812-compatible IRC server interface; you provide a backend implementation that talks to the actual protocol.
 
 ```clj
 [zeiat "0.0.0"]
@@ -11,11 +8,13 @@ A Clojure library designed to ... well, that part is up to you.
 
 ## Usage
 
-FIXME
+Create an implementation of the `zeiat.backend/ZeiatBackend` protocol and pass it to `zeiat.core/run` (if you want Zeiat to manage the listen socket for you) or `zeiat.core/create` (if you already have a socket connected to an IRC client). See the docstrings for those namespaces for more details.
+
+TODO: write better documentation.
 
 ## License
 
-Copyright © 2018 FIXME
+Copyright © 2021 Rebecca "ToxicFrog" Kelly
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.

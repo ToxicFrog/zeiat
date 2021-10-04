@@ -1,18 +1,16 @@
-(ns hangbrain.zeiat
+(ns zeiat.core
   "A library for connecting IRC to other protocols. Zeiat only handles the IRC frontend; it's up to you to provide a backend for it to connect to."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
-    [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
-    [taoensso.timbre :as log]
-    [clojure.string :as string]
-    [hangbrain.zeiat.translator :as translator]
-    [hangbrain.zeiat.ircd :as ircd]
-    [hangbrain.zeiat.types :refer [TranslatorAgent TranslatorState ZeiatBackend]]
     [clojure.java.io :as io]
-    )
+    [zeiat.ircd :as ircd]
+    [zeiat.translator :as translator]
+    [zeiat.types :refer [TranslatorAgent TranslatorState ZeiatBackend]]
+    [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
+    [taoensso.timbre :as log])
   (:import
-    [java.net Socket ServerSocket]
     [java.io PrintWriter BufferedReader]
+    [java.net Socket ServerSocket]
     ))
 
 (defn- handle-agent-error

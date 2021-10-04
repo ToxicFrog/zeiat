@@ -1,12 +1,12 @@
-(ns hangbrain.zeiat.ircd.messages
+(ns zeiat.ircd.messages
   "Commands for sending and receiving messages."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
-    [hangbrain.zeiat.ircd.core :as ircd :refer [message *state* numeric privmsg]]
-    [hangbrain.zeiat.backend :as backend]
-    [taoensso.timbre :as log]
-    [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [clojure.string :as string]
+    [zeiat.backend :as backend]
+    [zeiat.ircd.core :as ircd :refer [message *state* numeric privmsg]]
+    [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
+    [taoensso.timbre :as log]
     ))
 
 (defmethod message :PRIVMSG

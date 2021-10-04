@@ -1,10 +1,10 @@
-(ns hangbrain.zeiat.stub-backend
+(ns zeiat.stub-backend
   "A stub implementation of ZeiatBackend, for testing."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
+    [zeiat.backend :refer [ZeiatBackend]]
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [taoensso.timbre :as log]
-    [hangbrain.zeiat.backend :refer [ZeiatBackend]]
     ))
 
 (defn make-stub :- (s/protocol ZeiatBackend)
