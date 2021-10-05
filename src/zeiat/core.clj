@@ -46,7 +46,7 @@
           (send agent translator/shutdown! "client socket closed"))))))
 
 (defn create :- TranslatorAgent
-  "Create a translator agent with its state initialized to the client socket and backend config."
+  "Create a translator agent using the given socket (already connected to an IRC client) and backend instance."
   [socket :- Socket, backend :- ZeiatBackend]
   (let [agent (agent {:socket socket
                       :backend backend
@@ -69,7 +69,7 @@
 
 (defn run :- [TranslatorAgent]
   "Open a listen socket and loop accepting clients from it and creating a new Zeiat instance for each client. Continues until the socket is closed, then returns a seq of all still-connected clients."
-  [listen-port :- s/Int, backend :- ZeiatBackend]
+  [listen-port :- s/Int, make-backend :- (s/=> ZeiatBackend)]
   (let [sock (ServerSocket. listen-port)]
     (log/info "Listening for connections on port" listen-port)
     (loop [clients []]
@@ -77,7 +77,7 @@
         (recur
           ; TODO: once we can detect dead clients, we should filter them from the list here
           ; so they don't endlessly pile up.
-          (conj clients (create (.accept sock) backend)))
+          (conj clients (create (.accept sock) (make-backend))))
         clients))))
 
 (defn running? :- s/Bool
