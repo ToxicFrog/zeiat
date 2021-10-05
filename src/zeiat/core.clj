@@ -50,7 +50,7 @@
   [socket :- Socket, backend :- ZeiatBackend]
   (let [agent (agent {:socket socket
                       :backend backend
-                      :name nil :user nil :realname nil
+                      :name nil :user nil :realname nil :pass nil
                       :channels #{}
                       :last-seen {}
                       :writer (-> socket io/writer (PrintWriter. true))}

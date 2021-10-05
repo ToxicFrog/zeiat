@@ -16,13 +16,14 @@
   (and (:name state) (:user state)))
 
 (defn- check-registration [state]
-  (if (registered? state)
+  (when (registered? state)
     (binding [*state* state]
-      (numeric 1 "Welcome to the Zeiat IRC relay.")
-      (numeric 5 "CHANTYPES=# NICKLEN=64 SAFELIST MAXTARGETS=1 LINELEN=8192")
-      (numeric 376 "End of MOTD.")
-      (translator/connect! state))
-    state))
+      (let [welcome (translator/connect! state)]
+        (numeric 1 "Welcome to the Zeiat IRC relay.")
+        (numeric 4 welcome)
+        (numeric 5 "CHANTYPES=# NICKLEN=64 SAFELIST MAXTARGETS=1 LINELEN=8192")
+        (numeric 376 "End of MOTD."))))
+  state)
 
 (defmethod message :NICK :- TranslatorState
   [_ nick]
@@ -44,9 +45,10 @@
         (check-registration))))
 
 (defmethod message :PASS :- TranslatorState
-  ; Password support. Not currently implemented.
-  [_ _pass]
-  *state*)
+  [_ pass]
+  (if (registered? *state*)
+    (numeric 462 "Connection already registered.")
+    (assoc *state* :pass pass)))
 
 (defmethod message :CAP :- TranslatorState
   ; Capability negotiation. Currently we don't support this, which means we should just ignore it.

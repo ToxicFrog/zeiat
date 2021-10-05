@@ -58,11 +58,14 @@
         (send *agent* poll))
       state)))
 
-(defn connect! :- TranslatorState
-  "Called when user registration completes successfully. Should connect to the backend."
+(defn connect! :- s/Str
+  "Called when user registration completes successfully. Should connect to the backend. Returns the info string provided by the backend."
   [state :- TranslatorState]
-  (backend/connect (:backend state))
-  (poll state))
+  (let [user (assoc (select-keys state [:name :user :realname :pass])
+               :host (.. (:socket state) getInetAddress getCanonicalHostName))
+        welcome (backend/connect (:backend state) user)]
+    (poll state)
+    welcome))
 
 (defn shutdown! :- TranslatorState
   ([state]

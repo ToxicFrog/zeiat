@@ -1,6 +1,6 @@
 (defproject ca.ancilla/zeiat "0.1.0"
   :description "A library for proxying arbitrary backend protocols to IRC"
-  :url "https://github.com/toxicfrog/zeiat"
+  :url "https://github.com/toxicfrog/zeiat/"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[prismatic/schema "1.1.12"]

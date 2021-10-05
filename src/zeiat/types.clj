@@ -35,6 +35,7 @@
    :name (s/maybe backend/UserName)
    :user (s/maybe backend/UserName)
    :realname (s/maybe s/Str)
+   :pass (s/maybe s/Str)
    ; Set of joined channels. The output of listUnread() will be intersected with this
    ; to determine which channels the client should get messages from.
    :channels #{backend/ChannelName}

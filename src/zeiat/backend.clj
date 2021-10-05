@@ -64,6 +64,9 @@
 
 (defschema Message
   {; TODO should probably rename this "id" since it might not be a ts in all backends
+   ; TODO we will need to extend this to have both id and timestamp information, the former
+   ; for readMessagesSince, the latter for the servertime capability -- these will be the
+   ; same in a lot of backends but not necessarily all of them!
    :timestamp s/Any
    ; Origin, should be :me if the author is the logged in user and the author otherwise
    :from (s/cond-pre (s/enum :me) User)
@@ -90,12 +93,10 @@
    (s/optional-key :last-seen) s/Any})
 
 (defprotocol ZeiatBackend
-  "A protocol that Zeiat uses to communicate with whatever backend you connect to it. Library users should supply something that implements this protocol to zeiat/run."
-  (connect [this] ;- nil
-    ; TODO: this should take information about the registered user, so that the backend can
-    ; make decisions based on that, and should return human-readable information for the
-    ; frontend to display.
-    "Connect to the backend. Called when a new user connects to Zeiat.")
+  "A protocol that Zeiat uses to communicate with whatever backend you connect to it. Library users should supply something that implements this protocol to zeiat/create, or a function that returns protocol implementions to zeiat/run."
+  (connect [this user] ;- Str
+    "Connect to the backend. Called when a new user connects to Zeiat and completes IRC user registration (NICK/USER/PASS commands). The user parameter holds the user information, with an additional :pass field if the user supplied a password.
+    It should return a user-readable string that will be displayed to the user as part of a server info message.")
   (disconnect [this] ;- nil
     "Disconnect from the backend. Called when a user quits or is otherwise disconnected.")
   (listChannels [this] ;- [Channel]
@@ -118,9 +119,9 @@
 (defschema ^:private Backend (s/protocol ZeiatBackend))
 
 ;; Functions for checked calls to backend impls
-(defn connect
-  [this :- Backend]
-  (.connect this))
+(defn connect :- s/Str
+  [this :- Backend, user :- User]
+  (.connect this user))
 
 (defn disconnect
   [this :- Backend]

@@ -10,8 +10,9 @@
 (defn make-stub :- (s/protocol ZeiatBackend)
   []
   (reify ZeiatBackend
-    (connect [this]
-      (log/trace "stub: connect" this))
+    (connect [this user]
+      (log/trace "stub: connect" this user)
+      "this server is connected to a stub backend that does nothing")
     (disconnect [this]
       (log/trace "stub: disconnect" this))
     (listChannels [this]
