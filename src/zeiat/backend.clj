@@ -107,8 +107,6 @@
     "List status information for all chats; should return a map of chat IRC name to status. See the definition for ChatStatus for details on what should be included.")
   (statChannel [this channel] ;- Chat
     "Return information about a channel's users and read status.")
-  (listMembers [this channel] ;- [User]
-    "List all users in a given channel. See FIXME for the data shape. Called in response to NAMES or JOIN.")
   (readMessages [this channel] ;- [Message]
     "Return all messages from the given channel available in the backscroll. Implementors can limit this to only what's easily available if convenient (e.g. return only history that was autoloaded, not all history). Calling this should mark the chat as read.")
   (readMessagesSince [this channel id] ;- [Message]
@@ -134,10 +132,6 @@
 (defn list-users :- [User]
   [this :- Backend]
   (.listUsers this))
-
-(defn list-members :- [User]
-  [this :- Backend, channel :- ChannelName]
-  (.listMembers this channel))
 
 (defn list-chat-status :- [ChatStatus]
   ([this :- Backend]
