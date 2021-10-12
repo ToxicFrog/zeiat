@@ -54,7 +54,8 @@
   - 332 (topic)
   - 353/366 (names)"
   [joined channel]
-  (let [info (backend/stat-channel (:backend *state*) channel)]
+  (let [info (backend/stat-channel (:backend *state*) channel)
+        names (map :name (:users info))]
     (cond
       (nil? info)
       (do
@@ -69,7 +70,7 @@
       (do
         (reply-from (fqircn *state*) "JOIN" channel)
         (numeric 332 channel (:topic info))
-        (send-names channel (conj (:names info) (:name *state*)))
+        (send-names channel (conj names (:name *state*)))
         (conj joined channel)))))
 
 (defmethod message :JOIN
