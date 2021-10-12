@@ -80,11 +80,15 @@
   (let [channels (string/split channels #",")]
     (update *state* :channels #(reduce join-channel % channels))))
 
+(defn- part-channel
+  [joined channel]
+  (reply-from (fqircn *state*) "PART" channel ":Zeiat")
+  (disj joined channel))
+
 (defmethod message :PART
-  [_ channels _message]
-  *state*)
-  ; (let [channels (string/split channels #",")]
-  ;   (reduce part-channel *state* channels)))
+  [_ channels & _message]
+  (let [channels (string/split channels #",")]
+    (update *state* :channels #(reduce part-channel % channels))))
 
 (defmethod message :NAMES
   [_ channel]
