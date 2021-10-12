@@ -18,20 +18,22 @@
   [state :- TranslatorState, chats :- [AnyName]]
   (reduce
     (fn [state chat]
-      (log/trace "fetch-new-messages" chat)
+      (log/trace "fetch-new-messages" chat (:last-seen state))
       (let [last-seen (get-in state [:last-seen chat])
             messages (backend/read-messages-since (:backend state) chat last-seen)]
         (run! privmsg (filter #(not= :me (:from %)) messages))
-        (assoc-in state [:last-seen chat] (:timestamp (last messages)))))
+        (assoc-in state [:last-seen chat] (:timestamp (last messages) "--MISSING--"))))
     state chats))
 
 (defn- interesting?
   [{:keys [channels] :as _state} {:keys [type name] :as _chat}]
+  (log/trace "interesting?" _chat)
   (or (= type :dm)
     (contains? channels name)))
 
 (defn- unread?
   [{:keys [last-seen] :as _state} {:keys [name status] :as chat}]
+  (log/trace "unread?" chat (get last-seen name))
   (cond
     ; If we do not have a cache entry, or if the backend doesn't have a :last-seen field,
     ; consider the :status field authoritative
