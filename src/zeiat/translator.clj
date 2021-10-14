@@ -22,7 +22,10 @@
       (let [last-seen (get-in state [:last-seen chat])
             messages (backend/read-messages-since (:backend state) chat last-seen)]
         (run! privmsg (filter #(not= :me (:from %)) messages))
-        (assoc-in state [:last-seen chat] (:timestamp (last messages) "--MISSING--"))))
+        ; If messages is empty, (:timestamp (last messages)) is nil, so in that case
+        ; we default to the value we have recorded already -- otherwise we would end up
+        ; erasing it and fetching the entire history next time.
+        (assoc-in state [:last-seen chat] (:timestamp (last messages) last-seen))))
     state chats))
 
 (defn- interesting?
