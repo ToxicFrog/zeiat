@@ -25,7 +25,7 @@
 
 (defn- rpl-who
   [{:keys [name user host realname]}]
-  (numeric 352 "*" name host "Zeiat" user "H@" (str "0 " realname)))
+  (numeric 352 "*" user host "Zeiat" name "H@" (str "0 " realname)))
 
 (defmethod message :WHO
   ([_ & _filters]
