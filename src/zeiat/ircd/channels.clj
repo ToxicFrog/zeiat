@@ -71,14 +71,18 @@
         (reply-from (fqircn *state*) "JOIN" channel)
         (numeric 332 channel (:topic info))
         (send-names channel (conj names (:name *state*)))
+        ; TODO if the user has the autorecap capability negotiated, recap the
+        ; channel as soon as they join it
         (conj joined channel)))))
 
 (defmethod message :JOIN
   ; TODO: keys might be usable to differentiate otherwise-identical channels
   ; in backends that allow name collisions e.g. Discord
   [_ channels & _keys]
-  (let [channels (string/split channels #",")]
-    (update *state* :channels #(reduce join-channel % channels))))
+  (if (empty? (string/trim channels))
+    *state*
+    (let [channels (string/split channels #",")]
+      (update *state* :channels #(reduce join-channel % channels)))))
 
 (defn- part-channel
   [joined channel]

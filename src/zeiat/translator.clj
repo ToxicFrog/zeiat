@@ -21,6 +21,15 @@
       (log/trace "fetch-new-messages" chat (:last-seen state))
       (let [last-seen (get-in state [:last-seen chat])
             messages (backend/read-messages-since (:backend state) chat last-seen)]
+        ; TODO at the moment this takes the fairly brute force approach of filtering
+        ; out all messages from the user.
+        ; We should instead do something like: keep track of how many messages the user has
+        ; sent, and drop that many only
+        ; this means that echoes from the server will be properly dropped,
+        ; but self-messages in RECAP or sent via other clients will still be
+        ; echoed back to us.
+        ; TODO anything that results in a channel being re-statted should also result
+        ; in a new NAMES line being sent to the client
         (run! privmsg (filter #(not= :me (:from %)) messages))
         ; If messages is empty, (:timestamp (last messages)) is nil, so in that case
         ; we default to the value we have recorded already -- otherwise we would end up
