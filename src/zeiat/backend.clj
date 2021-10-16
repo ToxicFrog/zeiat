@@ -43,10 +43,11 @@
    ; at all; in that case the backend may choose to send an "activity count" such as
    ; number of unread messages, or just send 0.
    :count s/Int
-   ; Channel topic. Mandatory for statChannel. May be blank for listChannels, but any
-   ; useful identifying information the backend can include here is welcome, e.g.
-   ; the channel's human-readable name.
-   (s/optional-key :topic) s/Str
+   ; Channel topic. If the backend actually has this as a concept, include it where
+   ; possible. If not, or if it's particularly expensive to fetch, include any other
+   ; human-facing information that might be useful -- channel category, full name,
+   ; etc. If you can't get anything just send the empty string.
+   :topic s/Str
    ; Backend can store whatever additional information here is convenient
    s/Any s/Any
    })
