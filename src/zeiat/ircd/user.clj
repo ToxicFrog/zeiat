@@ -13,9 +13,16 @@
 (defn- registered?
   "True if the client connection is fully registered."
   [state]
-  (and (:name state) (:user state)))
+  (and
+    ; NAME and USER commands need to have been completed
+    (:name state)
+    (:user state)
+    ; and :caps needs to either be absent (no CAP LS command seen) or, if present,
+    ; needs to contain the :FINISHED marker indicating that capability negotiation
+    ; has completed.
+    (or (nil? (:caps state)) (:FINISHED (:caps state)))))
 
-(defn- check-registration [state]
+(defn check-registration [state]
   (when (registered? state)
     (binding [*state* state]
       (let [welcome (translator/connect! state)]
@@ -49,12 +56,6 @@
   (if (registered? *state*)
     (numeric 462 "Connection already registered.")
     (assoc *state* :pass pass)))
-
-(defmethod message :CAP :- TranslatorState
-  ; Capability negotiation. Currently we don't support this, which means we should just ignore it.
-  ; TODO: implement timestamp and msgid capabilities
-  [_ & _rest]
-  *state*)
 
 (defmethod message :PING :- TranslatorState
   [_ ping]

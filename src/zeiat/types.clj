@@ -39,14 +39,17 @@
    ; Set of joined channels. The output of listUnread() will be intersected with this
    ; to determine which channels the client should get messages from.
    :channels #{backend/ChannelName}
-   ; Negotiated capabilities. Not implemented yet.
-   ; Goal is to support:
-   ; - message-tags (required for other caps)
-   ; - servertime (message timestamps)
-   ; - echo-message (send confirmation)
-   ; - batch (for BATCH CHATHISTORY message)
-   ; - msgid tag (needed for edits/reactji)
-   ;:cap #{s/Str}
+   ; Negotiated capabilities.
+   ; Currently supported caps:
+   ; - message-tags (implicitly supported for server-time)
+   ; - server-time (timestamped messages)
+   ; - zeiat.ancilla.ca/autorecap (recap on channel join)
+   ; Future support planned:
+   ; - echo-message (once supported in weechat)
+   ; - batch (for chathistory)
+   ; - chathistory (once supported in weechat)
+   ; - msgid (to support echo/edits/reactji)
+   (s/optional-key :caps) #{(s/cond-pre s/Str (s/eq :FINISHED))}
    :last-seen {backend/AnyName s/Str}
    })
 

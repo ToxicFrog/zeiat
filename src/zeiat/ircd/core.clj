@@ -19,8 +19,25 @@
 
 (defn reply
   [& fields]
-  (.println (:writer *state*) (fields-to-message fields))
+  (let [message (fields-to-message fields)]
+    (log/trace "<<<" message)
+    (.println (:writer *state*) message))
   *state*)
+
+(defn- tags->str
+  [tags]
+  (->> tags
+       (map (fn [[k v]] (str k "=" v)))
+       (map (fn [s] s)) ; TODO implement tag escapement
+       (string/join ";")))
+
+(defn reply-tagged
+  [tags & fields]
+  (apply reply (->> tags tags->str (str "@")) fields))
+
+(defn reply-tagged-from
+  [tags name & fields]
+  (apply reply-tagged tags (str ":" name) fields))
 
 (defn reply-from
   [name & fields]
@@ -58,10 +75,22 @@
     (:name *state*)
     (:name who)))
 
+(defn cap?
+  [cap]
+  (contains? (:caps *state*) cap))
+
+(defn- reply-privmsg
+  [msg text]
+  (let [from (irctarget (:from msg))
+        to (irctarget (:to msg))]
+    (if (and (:timestamp msg) (cap? "server-time"))
+      (reply-tagged-from {"time" (:timestamp msg)} from "PRIVMSG" to text)
+      (reply-from from "PRIVMSG" to text))))
+
 (defn privmsg
   [msg]
   (log/trace "privmsg" msg)
   (->> (string/split-lines (:text msg))
        (map string/trim)
        (filter (complement empty?))
-       (run! (partial reply-from (irctarget (:from msg)) "PRIVMSG" (irctarget (:to msg))))))
+       (run! (partial reply-privmsg msg))))

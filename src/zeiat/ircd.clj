@@ -4,6 +4,7 @@
   (:require
     [zeiat.ircd.core :as ircd-core]
     [zeiat.ircd.user]
+    [zeiat.ircd.cap]
     [zeiat.ircd.channels]
     [zeiat.ircd.messages]
     [zeiat.ircd.list]
@@ -34,7 +35,7 @@
 (defn parse-line
   "Parse an IRC message into a prefix, command, and args."
   [message]
-  (log/trace "parse message" message)
+  (log/trace ">>>" message)
   (let [[_prefix message] (extract-prefix message)]
     (loop [message message fields []]
       (if (nil? message)
