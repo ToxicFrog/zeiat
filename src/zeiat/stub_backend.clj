@@ -38,4 +38,7 @@
       [])
     (writeMessage [this channel message]
       (log/trace "stub: writeMessage" this channel message)
+      true)
+    (writeCTCP [this channel command payload]
+      (log/trace "stub: writeCTCP" this channel command payload)
       true)))

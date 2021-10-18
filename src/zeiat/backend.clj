@@ -22,6 +22,7 @@
     #(string/starts-with? % "#") ChannelName
     string? UserName))
 
+; TODO add the last-seen/timestamp info to these schemas
 (defschema User
   "User metadata returned by listUsers and listUnread."
   {:name UserName
@@ -111,9 +112,12 @@
   (readMessages [this channel] ;- [Message]
     "Return all messages from the given channel available in the backscroll. Implementors can limit this to only what's easily available if convenient (e.g. return only history that was autoloaded, not all history). Calling this should mark the chat as read.")
   (readMessagesSince [this channel id] ;- [Message]
-    "Return all messages from the given channel after (not including) the message with the given ID.")
+    "Return all messages from the given channel after (not including) the message with the given ID. Calling this should mark the chat as read.")
   (writeMessage [this channel message] ;- bool
-    "Send a message to the given channel or user. Calling this should mark the chat as read. Returns true if the message was successfully sent, false otherwise."))
+    "Send a message to the given channel or user. Returns true if the message was successfully sent, false otherwise.")
+  (writeCTCP [this channel command payload] ;- bool
+    "Send a CTCP command to the given channel or user. Returns true if the message was successfully sent, false otherwise. `command` is the CTCP command (e.g. ACTION or TIME), `payload` the rest of the message.
+    Backends MUST implement support for CTCP ACTION, considering its ubiquity; other CTCPs such as TIME, PING, etc can be safely ignored, although backends that support file uploads or transfers may wish to implement support for the CTCP DCC command family."))
 
 (defschema ^:private Backend (s/protocol ZeiatBackend))
 
@@ -153,3 +157,7 @@
 (defn write-message :- s/Bool
   [this :- Backend, channel :- AnyName, msg :- s/Str]
   (.writeMessage this channel msg))
+
+(defn write-ctcp :- s/Bool
+  [this :- Backend, channel :- AnyName, command :- s/Str, payload :- s/Str]
+  (.writeCTCP this channel command payload))

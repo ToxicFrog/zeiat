@@ -9,16 +9,28 @@
     [taoensso.timbre :as log]
     ))
 
+(defn- is-ctcp?
+  [msg]
+  (and
+    (= \u0001 (first msg))
+    (= \u0001 (last msg))))
+
+(defn- write-ctcp
+  [channel msg]
+  (let [[command payload] (-> msg
+                              (subs 1 (dec (count msg)))
+                              (string/split #" " 2))]
+    (backend/write-ctcp channel command payload)))
+
 (defmethod message :PRIVMSG
   [_ channel msg]
   ; TODO: echo the sent message back to the client when it appears, if the client
   ; has negotiated the echo capability
-  ; TODO: handle CTCP properly, especially CTCP ACTION
-  (if (backend/write-message (:backend *state*) channel msg)
-    *state*
-    (if (string/starts-with? channel "#")
-      (numeric 403 channel "No such channel")
-      (numeric 401 channel "No such user"))))
+  (cond
+    (is-ctcp? msg) (write-ctcp channel msg)
+    (backend/write-message (:backend *state*) channel msg) *state*
+    (= \# (first channel)) (numeric 403 channel "No such channel")
+    :else (numeric 401 channel "No such user")))
 
 (defmethod message :RECAP
   [_ channel]

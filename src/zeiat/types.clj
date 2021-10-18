@@ -25,8 +25,6 @@
    ; become realized.
    :reader (s/pred future?)
    ; Backend object, implementation-dependent
-   ; TODO: move at least part of the channel cache from the backend to this structure,
-   ; so that each backend doesn't have to re-implement it
    :backend ZeiatBackend
    ; Information about the state of the IRC client starts here.
    ; NICK/USER information -- used when generating PRIVMSG/JOIN events. Set once
@@ -50,6 +48,8 @@
    ; - chathistory (once supported in weechat)
    ; - msgid (to support echo/edits/reactji)
    (s/optional-key :caps) #{(s/cond-pre s/Str (s/eq :FINISHED))}
+   ; Map from user/channel name to id of most recently seen message; used to
+   ; only send messages that the client hasn't yet seen.
    :last-seen {backend/AnyName s/Str}
    })
 

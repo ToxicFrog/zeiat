@@ -54,6 +54,7 @@
   - 332 (topic)
   - 353/366 (names)"
   [joined channel]
+  (log/trace "join channel" channel joined)
   (let [info (backend/stat-channel (:backend *state*) channel)
         names (map :name (:users info))]
     (cond
