@@ -39,6 +39,6 @@
     (writeMessage [this channel message]
       (log/trace "stub: writeMessage" this channel message)
       true)
-    (writeCTCP [this channel command payload]
-      (log/trace "stub: writeCTCP" this channel command payload)
+    (writeAction [this channel action]
+      (log/trace "stub: writeAction" this channel action)
       true)))

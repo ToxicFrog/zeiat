@@ -34,6 +34,7 @@
         ; If messages is empty, (:timestamp (last messages)) is nil, so in that case
         ; we default to the value we have recorded already -- otherwise we would end up
         ; erasing it and fetching the entire history next time.
+        (log/debug "Updating last-seen value for", (:name chat), "to", (:timestamp (last messages) last-seen), "from", last-seen)
         (assoc-in state [:last-seen chat] (:timestamp (last messages) last-seen))))
     state chats))
 
@@ -43,6 +44,12 @@
   (or (= type :dm)
     (contains? channels name)))
 
+; TODO this logic needs some rethinking; in particular it causes problems on Discord when we have a situation
+; where a channel is focused -- the channel state is always :read, so we have to compare the last-seen field
+; from the channel info struct to the one in the cache, but if we have yet to read messages from that channel
+; the last-seen field in the cache is nil, so we never realize we need to fetch messages from it
+; perhaps we should do something like: if we get a last-seen value but it's also marked read and we don't
+; have a cache entry for it, initialize the cache to that value?
 (defn- unread?
   [{:keys [last-seen] :as _state} {:keys [name status] :as chat}]
   (log/trace "unread?" chat (get last-seen name))
@@ -67,6 +74,8 @@
              (filter (partial unread? state))
              (map :name)
              (send *agent* fetch-new-messages)))
+      ; TODO the send returns immediately so I'm pretty sure this can result in poll requests piling up
+      ; the poll future should be recreated in fetch-new-messages instead
       (future
         (Thread/sleep 5000)
         (send *agent* poll))

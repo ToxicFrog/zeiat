@@ -115,9 +115,8 @@
     "Return all messages from the given channel after (not including) the message with the given ID. Calling this should mark the chat as read.")
   (writeMessage [this channel message] ;- bool
     "Send a message to the given channel or user. Returns true if the message was successfully sent, false otherwise.")
-  (writeCTCP [this channel command payload] ;- bool
-    "Send a CTCP command to the given channel or user. Returns true if the message was successfully sent, false otherwise. `command` is the CTCP command (e.g. ACTION or TIME), `payload` the rest of the message.
-    Backends MUST implement support for CTCP ACTION, considering its ubiquity; other CTCPs such as TIME, PING, etc can be safely ignored, although backends that support file uploads or transfers may wish to implement support for the CTCP DCC command family."))
+  (writeAction [this channel action] ;- bool
+    "Send a CTCP ACTION command to the given channel (i.e. the '/me does stuff' command)."))
 
 (defschema ^:private Backend (s/protocol ZeiatBackend))
 
@@ -158,6 +157,6 @@
   [this :- Backend, channel :- AnyName, msg :- s/Str]
   (.writeMessage this channel msg))
 
-(defn write-ctcp :- s/Bool
-  [this :- Backend, channel :- AnyName, command :- s/Str, payload :- s/Str]
-  (.writeCTCP this channel command payload))
+(defn write-action :- s/Bool
+  [this :- Backend, channel :- AnyName, action :- s/Str]
+  (.writeAction this channel action))

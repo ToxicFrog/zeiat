@@ -20,7 +20,8 @@
   (let [[command payload] (-> msg
                               (subs 1 (dec (count msg)))
                               (string/split #" " 2))]
-    (backend/write-ctcp channel command payload)))
+    (when (= "ACTION" command)
+      (backend/write-action (:backend *state*) channel payload))))
 
 (defmethod message :PRIVMSG
   [_ channel msg]
