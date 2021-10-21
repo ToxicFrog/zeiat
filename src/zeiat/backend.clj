@@ -140,7 +140,7 @@
   ([this :- Backend]
    (.listChatStatus this)))
 
-(defn stat-channel :- Channel
+(defn stat-channel :- (s/maybe Channel)
   [this :- Backend, channel :- ChannelName]
   (.statChannel this channel))
 
