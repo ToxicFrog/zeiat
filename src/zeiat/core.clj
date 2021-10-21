@@ -52,7 +52,7 @@
                       :backend backend
                       :name nil :user nil :realname nil :pass nil
                       :channels #{}
-                      :last-seen {}
+                      :cache {}
                       :writer (-> socket io/writer (PrintWriter. true))}
                 ; We do not install the validator here because we can't create the :reader field
                 ; until after the agent has been created; so instead we partially create the agent

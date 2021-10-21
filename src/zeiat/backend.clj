@@ -22,7 +22,6 @@
     #(string/starts-with? % "#") ChannelName
     string? UserName))
 
-; TODO add the last-seen/timestamp info to these schemas
 (defschema User
   "User metadata returned by listUsers and listUnread."
   {:name UserName
@@ -92,7 +91,7 @@
   {:name AnyName
    :type (s/enum :dm :channel)
    :status (s/enum :read :unread)
-   (s/optional-key :last-seen) s/Any})
+   (s/optional-key :last-seen) s/Str})
 
 (defprotocol ZeiatBackend
   "A protocol that Zeiat uses to communicate with whatever backend you connect to it. Library users should supply something that implements this protocol to zeiat/create, or a function that returns protocol implementions to zeiat/run."

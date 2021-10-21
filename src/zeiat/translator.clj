@@ -14,33 +14,40 @@
   [state :- TranslatorState]
   state)
 
+(defn- filter-n-self-messages
+  [n messages]
+  (let [to-remove (->> messages (filter #(= :me (:from %))) (take n) set)]
+    [(count to-remove) (filter (complement to-remove) messages)]))
+
 (defn fetch-new-messages :- TranslatorState
   [state :- TranslatorState, chats :- [AnyName]]
   (reduce
     (fn [state chat]
       (log/trace "fetch-new-messages" chat (:last-seen state))
-      (let [last-seen (get-in state [:last-seen chat])
-            messages (backend/read-messages-since (:backend state) chat last-seen)]
-        ; TODO at the moment this takes the fairly brute force approach of filtering
-        ; out all messages from the user.
-        ; We should instead do something like: keep track of how many messages the user has
-        ; sent, and drop that many only
-        ; this means that echoes from the server will be properly dropped,
-        ; but self-messages in RECAP or sent via other clients will still be
-        ; echoed back to us.
-        ; TODO anything that results in a channel being re-statted should also result
-        ; in a new NAMES line being sent to the client
-        (run! privmsg (filter #(not= :me (:from %)) messages))
+      (let [{:keys [last-seen outgoing]} (get-in state [:cache chat] {:last-seen nil :outgoing 0})
+            messages (backend/read-messages-since (:backend state) chat last-seen)
+            [n-removed displayable-messages] (filter-n-self-messages outgoing messages)]
+        (run! privmsg displayable-messages)
+        (log/debug "Updating last-seen value for", (:name chat), "to", (:timestamp (last messages) last-seen), "from", last-seen)
+        (log/debug "Reducing outgoing counter for" (:name chat) "by" n-removed "currently" outgoing)
+        (when (> n-removed outgoing)
+          (log/warn (:name chat) "n-removed value greater than outgoing:" n-removed outgoing))
         ; If messages is empty, (:timestamp (last messages)) is nil, so in that case
         ; we default to the value we have recorded already -- otherwise we would end up
         ; erasing it and fetching the entire history next time.
-        (log/debug "Updating last-seen value for", (:name chat), "to", (:timestamp (last messages) last-seen), "from", last-seen)
-        (assoc-in state [:last-seen chat] (:timestamp (last messages) last-seen))))
+        ; TODO anything that can write a new cache entry (which right now means this, recap, and PRIVMSG handlers)
+        ; needs to write a COMPLETE new cache entry, which is not great
+        (assoc-in state [:cache chat]
+          {:last-seen (:timestamp (last messages) last-seen)
+           :outgoing (max 0 (- outgoing n-removed))})
+        ))
+        ; TODO anything that results in a channel being re-statted should also result
+        ; in a new NAMES line being sent to the client
     state chats))
 
 (defn- interesting?
   [{:keys [channels] :as _state} {:keys [type name] :as _chat}]
-  (log/trace "interesting?" _chat)
+  ;(log/trace "interesting?" _chat)
   (or (= type :dm)
     (contains? channels name)))
 
@@ -51,16 +58,20 @@
 ; perhaps we should do something like: if we get a last-seen value but it's also marked read and we don't
 ; have a cache entry for it, initialize the cache to that value?
 (defn- unread?
-  [{:keys [last-seen] :as _state} {:keys [name status] :as chat}]
-  (log/trace "unread?" chat (get last-seen name))
-  (cond
-    ; If we do not have a cache entry, or if the backend doesn't have a :last-seen field,
-    ; consider the :status field authoritative
-    (not (contains? last-seen name)) (= :unread status)
-    (nil? (:last-seen chat)) (= :unread status)
-    ; If it does have a :last-seen field, compare it with the cache entry
-    :else (not= (last-seen name) (:last-seen chat))
-    ))
+  [state {:keys [name status] :as chat}]
+  (let [last-seen (get-in state [:cache name :last-seen])]
+    (log/trace "unread?" last-seen chat)
+    (cond
+      ; No cache entry? We have to trust the :read/:unread status reported by the backend.
+      (nil? last-seen) (= :unread status)
+      ; If we have a cache entry but it's set to the special value "", always treat it as unread.
+      (= "" last-seen) true
+      ; If we have a cache entry, but the backend didn't return anything to compare it to,
+      ; treat it as if we had no cache entry.
+      (nil? (:last-seen chat)) (= :unread status)
+      ; Finally, if we do have a cache entry *and* the backend returned something we can compare it to, do so.
+      :else (not= (last-seen name) (:last-seen chat))
+      )))
 
 (defn- poll
   [{:keys [backend socket] :as state}]

@@ -28,15 +28,23 @@
   ; TODO: echo the sent message back to the client when it appears, if the client
   ; has negotiated the echo capability
   (cond
-    (is-ctcp? msg) (write-ctcp channel msg)
-    (backend/write-message (:backend *state*) channel msg) *state*
+    (if (is-ctcp? msg)
+      ; TODO we should only inc outgoing if this actually succeeds...we need
+      ; better error handling in general
+      (write-ctcp channel msg)
+      (backend/write-message (:backend *state*) channel msg))
+    (update-in *state* [:cache channel]
+      #(-> %
+           (update :outgoing (fnil inc 0))
+           (update :last-seen (fnil identity nil))))
     (= \# (first channel)) (numeric 403 channel "No such channel")
     :else (numeric 401 channel "No such user")))
 
 (defmethod message :RECAP
   [_ channel]
-  (let [recap (backend/read-messages (:backend *state*) channel)]
-    (log/trace "Done fetching RECAP, total message count:" (count recap))
-    (if (nil? recap)
-      (numeric 403 channel "No such user/channel")
-      (do (run! privmsg recap) *state*))))
+  ; sentinel value in the cache telling it to always assume unread and fetch all data
+  ; TODO this is a gross hack to make sure a complete cache value is written
+  (update-in *state* [:cache channel]
+    #(-> %
+         (update :outgoing (fnil identity 0))
+         (assoc :last-seen ""))))

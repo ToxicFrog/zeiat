@@ -10,6 +10,13 @@
   "Schema for objects implementing the Zeiat backend protocol. See zeiat.backend for details."
   (s/protocol backend/ZeiatBackend))
 
+(defschema CacheEntry
+  {; ID of most recently seen message. Can also be the sentinel values "" for "consider all messages unread"
+   ; and nil for "no data, trust the read/unread bit from the backend instead".
+   :last-seen (s/maybe s/Str)
+   ; Number of outgoing messages we haven't seen echoed back yet and should drop on receipt
+   :outgoing s/Int})
+
 (defschema TranslatorState
   "The internal state of a Zeiat translator session.
   Structurally, a Zeiat session consists of:
@@ -48,9 +55,10 @@
    ; - chathistory (once supported in weechat)
    ; - msgid (to support echo/edits/reactji)
    (s/optional-key :caps) #{(s/cond-pre s/Str (s/eq :FINISHED))}
-   ; Map from user/channel name to id of most recently seen message; used to
-   ; only send messages that the client hasn't yet seen.
-   :last-seen {backend/AnyName s/Str}
+   ; Cache of chat information. Stores the last-seen ID from the channel (for
+   ; use with readMessagesSince) and the number of outgoing messages (so we can
+   ; filter message echoes out).
+   :cache {backend/AnyName CacheEntry}
    })
 
 (defschema TranslatorAgent
