@@ -53,12 +53,6 @@
   (or (= type :dm)
     (contains? channels name)))
 
-; TODO this logic needs some rethinking; in particular it causes problems on Discord when we have a situation
-; where a channel is focused -- the channel state is always :read, so we have to compare the last-seen field
-; from the channel info struct to the one in the cache, but if we have yet to read messages from that channel
-; the last-seen field in the cache is nil, so we never realize we need to fetch messages from it
-; perhaps we should do something like: if we get a last-seen value but it's also marked read and we don't
-; have a cache entry for it, initialize the cache to that value?
 (defn- unread?
   [state {:keys [name status] :as chat}]
   (let [last-seen (:last-seen (statelib/read-cache state name))]
@@ -81,18 +75,29 @@
     (do (log/trace "poll thread exiting") state)
     (do
       (log/trace "polling for new messages...")
-      (binding [*state* state]
-        (->> (backend/list-chat-status backend)
+      (let [statii (backend/list-chat-status backend)
+            updates (->> statii
+                         (filter :last-seen)
+                         (filter #(-> % :status (= :read)))
+                         (filter #(-> state (statelib/read-cache (:name %)) :last-seen nil?))
+                         (map (fn [info] [(:name info) (:last-seen info)])))]
+        (->> statii
              (filter (partial interesting? state))
              (filter (partial unread? state))
              (map :name)
-             (send *agent* fetch-new-messages)))
-      ; TODO the send returns immediately so I'm pretty sure this can result in poll requests piling up
-      ; the poll future should be recreated in fetch-new-messages instead
-      (future
-        (Thread/sleep 5000)
-        (send *agent* poll))
-      state)))
+             (send *agent* fetch-new-messages))
+        ; TODO move this to the end of fetch-new-messages, so that it's "5s after the previous poll finishes"
+        ; rather than "every 5s".
+        ; maybe end the above ->> with (send *agent* (comp #(future...) fetch-new-messages))
+        (future
+          (Thread/sleep 5000)
+          (send *agent* poll))
+        (reduce
+          (fn [state [name last-seen]]
+            (log/debug "Recording initial last-seen value of" last-seen "for" name)
+            (statelib/write-cache state name :last-seen last-seen))
+          state updates)
+        ))))
 
 (defn connect! :- s/Str
   "Called when user registration completes successfully. Should connect to the backend. Returns the info string provided by the backend."
