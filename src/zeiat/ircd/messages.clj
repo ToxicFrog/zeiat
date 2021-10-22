@@ -5,6 +5,7 @@
     [clojure.string :as string]
     [zeiat.backend :as backend]
     [zeiat.ircd.core :as ircd :refer [message *state* numeric privmsg]]
+    [zeiat.state :as statelib]
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [taoensso.timbre :as log]
     ))
@@ -33,18 +34,13 @@
       ; better error handling in general
       (write-ctcp channel msg)
       (backend/write-message (:backend *state*) channel msg))
-    (update-in *state* [:cache channel]
-      #(-> %
-           (update :outgoing (fnil inc 0))
-           (update :last-seen (fnil identity nil))))
+    (statelib/update-cache *state* channel
+                           :outgoing inc)
     (= \# (first channel)) (numeric 403 channel "No such channel")
     :else (numeric 401 channel "No such user")))
 
 (defmethod message :RECAP
   [_ channel]
   ; sentinel value in the cache telling it to always assume unread and fetch all data
-  ; TODO this is a gross hack to make sure a complete cache value is written
-  (update-in *state* [:cache channel]
-    #(-> %
-         (update :outgoing (fnil identity 0))
-         (assoc :last-seen ""))))
+  (statelib/write-cache *state* channel
+                        :last-seen ""))

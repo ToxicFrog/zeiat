@@ -5,6 +5,7 @@
     [zeiat.backend :as backend :refer [AnyName]]
     [zeiat.ircd.core :refer [*state* privmsg]]
     [zeiat.types :refer [TranslatorState]]
+    [zeiat.state :as statelib]
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [taoensso.timbre :as log]
     ))
@@ -24,22 +25,23 @@
   (reduce
     (fn [state chat]
       (log/trace "fetch-new-messages" chat (:last-seen state))
-      (let [{:keys [last-seen outgoing]} (get-in state [:cache chat] {:last-seen nil :outgoing 0})
+      (let [{:keys [last-seen outgoing]} (statelib/read-cache state chat)
             messages (backend/read-messages-since (:backend state) chat last-seen)
             [n-removed displayable-messages] (filter-n-self-messages outgoing messages)]
         (run! privmsg displayable-messages)
-        (log/debug "Updating last-seen value for", (:name chat), "to", (:timestamp (last messages) last-seen), "from", last-seen)
-        (log/debug "Reducing outgoing counter for" (:name chat) "by" n-removed "currently" outgoing)
+        (log/debug "Updating last-seen value for", chat, "to", (:timestamp (last messages) last-seen), "from", last-seen)
+        (log/debug "Reducing outgoing counter for" chat "by" n-removed "currently" outgoing)
         (when (> n-removed outgoing)
-          (log/warn (:name chat) "n-removed value greater than outgoing:" n-removed outgoing))
+          (log/warn chat "n-removed value greater than outgoing:" n-removed outgoing))
         ; If messages is empty, (:timestamp (last messages)) is nil, so in that case
         ; we default to the value we have recorded already -- otherwise we would end up
         ; erasing it and fetching the entire history next time.
         ; TODO anything that can write a new cache entry (which right now means this, recap, and PRIVMSG handlers)
         ; needs to write a COMPLETE new cache entry, which is not great
-        (assoc-in state [:cache chat]
-          {:last-seen (:timestamp (last messages) last-seen)
-           :outgoing (max 0 (- outgoing n-removed))})
+        (statelib/write-cache
+          state chat
+          :last-seen (:timestamp (last messages) last-seen)
+          :outgoing (max 0 (- outgoing n-removed)))
         ))
         ; TODO anything that results in a channel being re-statted should also result
         ; in a new NAMES line being sent to the client
@@ -59,7 +61,7 @@
 ; have a cache entry for it, initialize the cache to that value?
 (defn- unread?
   [state {:keys [name status] :as chat}]
-  (let [last-seen (get-in state [:cache name :last-seen])]
+  (let [last-seen (:last-seen (statelib/read-cache state name))]
     (log/trace "unread?" last-seen chat)
     (cond
       ; No cache entry? We have to trust the :read/:unread status reported by the backend.
@@ -70,7 +72,7 @@
       ; treat it as if we had no cache entry.
       (nil? (:last-seen chat)) (= :unread status)
       ; Finally, if we do have a cache entry *and* the backend returned something we can compare it to, do so.
-      :else (not= (last-seen name) (:last-seen chat))
+      :else (not= last-seen (:last-seen chat))
       )))
 
 (defn- poll
