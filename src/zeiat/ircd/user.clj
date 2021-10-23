@@ -25,11 +25,12 @@
 (defn check-registration [state]
   (when (registered? state)
     (binding [*state* state]
-      (let [welcome (translator/connect! state)]
-        (numeric 1 "Welcome to the Zeiat IRC relay.")
-        (numeric 4 welcome)
-        (numeric 5 "CHANTYPES=# NICKLEN=64 SAFELIST MAXTARGETS=1 LINELEN=8192")
-        (numeric 376 "End of MOTD."))))
+      ; We send 001 immediately so the client doesn't time out while waiting for
+      ; connect! to return, which may take quite some time depending on the backend.
+      (numeric 1 "Welcome to the Zeiat IRC relay.")
+      (numeric 4 (translator/connect! state))
+      (numeric 5 "CHANTYPES=# NICKLEN=64 SAFELIST MAXTARGETS=1 LINELEN=8192")
+      (numeric 376 "End of MOTD.")))
   state)
 
 (defmethod message :NICK :- TranslatorState
