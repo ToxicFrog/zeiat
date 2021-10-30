@@ -4,7 +4,7 @@
   (:require
     [clojure.string :as string]
     [zeiat.backend :as backend]
-    [zeiat.ircd.core :as ircd :refer [message *state* numeric privmsg]]
+    [zeiat.ircd.core :as ircd :refer [message *state* numeric privmsg reply-from]]
     [zeiat.state :as statelib]
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [taoensso.timbre :as log]
@@ -42,5 +42,8 @@
 (defmethod message :RECAP
   [_ channel]
   ; sentinel value in the cache telling it to always assume unread and fetch all data
+  (if (= \# (first channel))
+         (reply-from "Zeiat" "NOTICE" channel "RECAP message received, please wait...")
+         (reply-from channel "NOTICE" (:name *state*) "RECAP message received, please wait..."))
   (statelib/write-cache *state* channel
                         :last-seen ""))
