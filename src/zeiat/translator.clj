@@ -89,14 +89,12 @@
         (->> statii
              (filter (partial interesting? state))
              (filter (partial unread? state))
-             (map :name)
-             (send *agent* fetch-new-messages))
-        ; TODO move this to the end of fetch-new-messages, so that it's "5s after the previous poll finishes"
-        ; rather than "every 5s".
-        ; maybe end the above ->> with (send *agent* (comp #(future...) fetch-new-messages))
-        (future
-          (Thread/sleep 5000)
-          (send *agent* poll))
+             ;(map :name)
+             (send *agent* (fn message-fetcher [state chats]
+                             (let [state' (fetch-new-messages state chats)]
+                               (log/trace "poll complete, scheduling next poll")
+                               (future (Thread/sleep 5000) (send *agent* poll))
+                               state'))))
         (reduce
           (fn [state [name last-seen]]
             (log/debug "Recording initial last-seen value of" last-seen "for" name)
