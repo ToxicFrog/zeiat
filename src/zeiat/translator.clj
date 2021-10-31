@@ -2,7 +2,7 @@
   "The translator agent implementation. This handles processing commands and refreshing the backend."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
-    [zeiat.backend :as backend :refer [AnyName]]
+    [zeiat.backend :as backend :refer [ChatStatus]]
     [zeiat.ircd.core :refer [*state* privmsg]]
     [zeiat.types :refer [TranslatorState]]
     [zeiat.state :as statelib]
@@ -21,9 +21,13 @@
     [(count to-remove) (filter (complement to-remove) messages)]))
 
 (defn fetch-new-messages :- TranslatorState
-  [state :- TranslatorState, chats :- [AnyName]]
+  [state :- TranslatorState, chats :- [ChatStatus]]
   (reduce
-    (fn [state chat]
+    (fn [state info]
+      (let [chat (:name info)]
+      (log/debug "Fetching new messages for" chat
+                 "with cached timestamp" (statelib/read-cache state chat)
+                 "and info from backend" info)
       (log/trace "fetch-new-messages" chat (:last-seen state))
       (let [{:keys [last-seen outgoing]} (statelib/read-cache state chat)
             messages (backend/read-messages-since (:backend state) chat last-seen)
@@ -43,6 +47,7 @@
           :last-seen (:timestamp (last messages) last-seen)
           :outgoing (max 0 (- outgoing n-removed)))
         ))
+      )
         ; TODO anything that results in a channel being re-statted should also result
         ; in a new NAMES line being sent to the client
     state chats))
@@ -56,7 +61,7 @@
 (defn- unread?
   [state {:keys [name status] :as chat}]
   (let [last-seen (:last-seen (statelib/read-cache state name))]
-    (log/trace "unread?" last-seen chat)
+    ; (log/trace "unread?" last-seen chat)
     (cond
       ; No cache entry? We have to trust the :read/:unread status reported by the backend.
       (nil? last-seen) (= :unread status)
