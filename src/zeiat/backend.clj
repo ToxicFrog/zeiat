@@ -108,6 +108,9 @@
     "List status information for all chats; should return a map of chat IRC name to status. See the definition for ChatStatus for details on what should be included.")
   (statChannel [this channel] ;- Chat
     "Return information about a channel's users and read status.")
+  ; rather than having readMessages/readMessagesSince, we should just have one readMessages
+  ; that takes optional tail arguments specifying how many and what timestamp cutoff to use;
+  ; in particular that lets clients optimize RECAP N
   (readMessages [this channel] ;- [Message]
     "Return all messages from the given channel available in the backscroll. Implementors can limit this to only what's easily available if convenient (e.g. return only history that was autoloaded, not all history). Calling this should mark the chat as read.")
   (readMessagesSince [this channel id] ;- [Message]

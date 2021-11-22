@@ -39,6 +39,7 @@
     (= \# (first channel)) (numeric 403 channel "No such channel")
     :else (numeric 401 channel "No such user")))
 
+; TODO: support optional second argument saying how many messages to recap
 (defmethod message :RECAP
   [_ channel]
   ; sentinel value in the cache telling it to always assume unread and fetch all data

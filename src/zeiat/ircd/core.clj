@@ -65,6 +65,8 @@
     (try
       (log/trace "dispatching message" command argv)
       (apply message command argv)
+      ; TODO we should define some error types of our own like NoSuchChannel,
+      ; NoSuchUser, etc, catch those, and return appropriate numerics
       (catch clojure.lang.ArityException e
         (log/warn e "internal error handling command")
         (numeric 461 command "Wrong number of arguments for command")))))

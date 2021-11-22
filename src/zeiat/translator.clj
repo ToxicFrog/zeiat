@@ -40,10 +40,11 @@
         ; If messages is empty, (:timestamp (last messages)) is nil, so in that case
         ; we default to the value we have recorded already -- otherwise we would end up
         ; erasing it and fetching the entire history next time.
-        ; TODO anything that can write a new cache entry (which right now means this, recap, and PRIVMSG handlers)
-        ; needs to write a COMPLETE new cache entry, which is not great
         (statelib/write-cache
           state chat
+          ; TODO: (last messages) doesn't always work here because some backends (e.g. discord) send messages out-of-order
+          ; in ways that still read reasonably but mean that the last message isn't always the one with the highest TS
+          ; we should instead select the max timestamp from the messages we fetched
           :last-seen (:timestamp (last messages) last-seen)
           :outgoing (max 0 (- outgoing n-removed)))
         ))
@@ -61,7 +62,7 @@
 (defn- unread?
   [state {:keys [name status] :as chat}]
   (let [last-seen (:last-seen (statelib/read-cache state name))]
-    ; (log/trace "unread?" last-seen chat)
+    (log/trace "unread?" (statelib/read-cache state name) chat)
     (cond
       ; No cache entry? We have to trust the :read/:unread status reported by the backend.
       (nil? last-seen) (= :unread status)
@@ -111,6 +112,8 @@
     (poll state)
     welcome))
 
+; TODO on SIGINT we don't reliably shut down the backend, which can e.g. leave
+; orphaned chromedriver processes lying around everywhere
 (defn shutdown! :- TranslatorState
   ([state]
    (shutdown! state "(no reason given)"))
