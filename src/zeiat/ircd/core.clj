@@ -45,11 +45,7 @@
 
 (defn numeric
   [num & fields]
-  (.println
-    (:writer *state*)
-    (fields-to-message
-      (concat [":Zeiat" (format "%03d" num) (:name *state* "*")] fields)))
-  *state*)
+  (apply reply-from "Zeiat" (format "%03d" num) (:name *state* "*") fields))
 
 (defmulti message
   (fn [command & _rest]
