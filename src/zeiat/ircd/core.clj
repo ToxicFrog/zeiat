@@ -85,10 +85,18 @@
       (reply-tagged-from {"time" (:timestamp msg)} from "PRIVMSG" to text)
       (reply-from from "PRIVMSG" to text))))
 
+(defn trim-whitespace
+  "We use this instead of string/trim because string/trim considers some IRC formatting codes, like ^] (GROUP SEPARATOR), to be whitespace."
+  [s]
+  (->
+    s
+    (string/replace #"^[\n\t ]+" "")
+    (string/replace #"[\n\t ]+$" "")))
+
 (defn privmsg
   [msg]
   (log/trace "privmsg" msg)
   (->> (string/split-lines (:text msg))
-       (map string/trim)
+       (map trim-whitespace)
        (filter (complement empty?))
        (run! (partial reply-privmsg msg))))
