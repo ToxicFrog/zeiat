@@ -1,4 +1,4 @@
-(defproject ca.ancilla/zeiat "0.1.0"
+(defproject ca.ancilla/zeiat "0.2.0-SNAPSHOT"
   :description "A library for proxying arbitrary backend protocols to IRC"
   :url "https://github.com/toxicfrog/zeiat/"
   :license {:name "Eclipse Public License"
