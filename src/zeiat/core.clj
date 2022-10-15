@@ -12,8 +12,7 @@
     [taoensso.timbre :as log])
   (:import
     [java.io PrintWriter BufferedReader]
-    [java.net Socket ServerSocket]
-    ))
+    [java.net Socket ServerSocket]))
 
 (defn- handle-agent-error
   [agent error]

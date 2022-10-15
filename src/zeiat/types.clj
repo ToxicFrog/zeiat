@@ -3,8 +3,7 @@
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
     [zeiat.backend :as backend]
-    [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
-    ))
+    [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]))
 
 (defschema ZeiatBackend
   "Schema for objects implementing the Zeiat backend protocol. See zeiat.backend for details."
@@ -15,7 +14,13 @@
    ; and nil for "no data, trust the read/unread bit from the backend instead".
    :last-seen (s/maybe s/Str)
    ; Number of outgoing messages we haven't seen echoed back yet and should drop on receipt
-   :outgoing s/Int})
+   :outgoing s/Int
+   ; Queue of outgoing messages we haven't sent yet. This is used to batch together multiline messages
+   ; so that the backend can send them as a single message.
+   ; These are not included in the outgoing count.
+   ; The queue is flushed (and :outgoing incremented) when the sendq timeout expires, or
+   ; immediately when a message other than PRIVMSG is sent.
+   :sendq [s/Str]})
 
 (defschema TranslatorState
   "The internal state of a Zeiat translator session.
@@ -58,8 +63,8 @@
    ; Cache of chat information. Stores the last-seen ID from the channel (for
    ; use with readMessagesSince) and the number of outgoing messages (so we can
    ; filter message echoes out).
-   :cache {backend/AnyName CacheEntry}
-   })
+   :cache {backend/AnyName CacheEntry}})
+
 
 (defschema TranslatorAgent
   ; No validation for the agent interior as yet, but TranslatorState is installed as a validator when the agent is created, which should help.
