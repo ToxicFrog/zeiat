@@ -40,6 +40,10 @@
       (log/trace "socket reader thread, here we go!")
       (try
         (doseq [line (reader-seq reader)]
+          ; TODO: if we get a whole bunch of privmsgs in rapid succession, concat them together and send them off as a single
+          ; message with embedded newlines
+          ; the backend is then responsible for sending it as a single message, in backends that support newlines,
+          ; or splitting it up if it doesn't.
           (apply send agent
             ircd/dispatch-message (ircd/parse-line line)))
         (log/trace "socket closed, gbye")
