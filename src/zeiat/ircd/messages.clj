@@ -26,18 +26,12 @@
                               (subs 1 (dec (count msg)))
                               (string/split #" " 2))]
     (cond
-      (= "ACTION" command)
-      (do
-        (statelib/flush-queue *state* channel 0)
-        (if (backend/write-action (:backend *state*) channel payload)
-          (statelib/update-cache *state* channel :outgoing inc)
-          (reply-missing channel)))
-      :else
-      (numeric 421 (str "CTCP:" command) "Unsupported CTCP subcommand"))))
+      (= "ACTION" command) (statelib/enqueue-action *state* channel payload)
+      :else (numeric 421 (str "CTCP:" command) "Unsupported CTCP subcommand"))))
 
 (defn- write-privmsg
   [channel msg]
-  (statelib/enqueue *state* channel msg))
+  (statelib/enqueue-privmsg *state* channel msg))
 
 (defmethod message :PRIVMSG
   [_ channel msg]

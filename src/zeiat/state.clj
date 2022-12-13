@@ -7,7 +7,7 @@
     [taoensso.timbre :as log]
     [zeiat.backend :as backend :refer [AnyName]]
     [zeiat.ircd.core :as ircd]
-    [zeiat.types :refer [TranslatorState CacheEntry]]))
+    [zeiat.types :refer [TranslatorState CacheEntry Enqueued]]))
 
 (defn has-cache? :- s/Bool
   [state :- TranslatorState, channel :- AnyName]
@@ -37,27 +37,31 @@
     (ircd/numeric 403 target "No such channel")
     (ircd/numeric 401 target "No such user")))
 
-(defn flush-queue
-  [state :- TranslatorState, channel :- AnyName]
-  "Unconditionally flush the queue for the given channel."
-  (let [queue (-> state (read-cache channel) :sendq)
-        pending (count queue)
-        msg (string/join "\n" queue)]
-    (log/trace "Flushing sendq for" channel "with content" queue "aka" msg)
-    (if (backend/write-message (:backend state) channel msg)
-      ; Successful send; empty queue and increment outgoing count.
-      ; TODO: on backends that don't support message batching, the outgoing count
-      ; will be too low.
-      (update-cache state channel
-        :outgoing inc
-        :sendq (constantly []))
-      ; Unsuccessful send. Complain to the user and empty the queue.
-      (do
-        (log/trace "Flush failed, reporting error to user.")
-        (reply-missing channel)
-        (write-cache state channel :sendq [])))))
+(defn send-partition :- s/Num
+  [state :- TranslatorState, channel :- AnyName, partition :- [Enqueued]]
+  (let [type (-> partition first first)
+        payload (map second partition)]
+    (case type
+      :PRIVMSG
+      (if (backend/write-message (:backend state) channel (string/join "\n" payload))
+        1 0)
+      :ACTION
+      (->> payload
+        (map (partial backend/write-action (:backend state) channel))
+        (filter identity)
+        count))))
 
-(defn try-flush-queue
+(defn flush-queue :- TranslatorState
+  "Unconditionally flush the queue for the given channel."
+  [state :- TranslatorState, channel :- AnyName]
+  (let [queue (->> (read-cache state channel) :sendq (partition-by first))]
+    (log/trace "Flushing sendq for" channel "with content" queue)
+    (update-cache state channel
+      :outgoing (fn [outgoing]
+                  (reduce + outgoing (map (partial send-partition state channel) queue)))
+      :sendq (constantly []))))
+
+(defn try-flush-queue :- TranslatorState
   "Flush the queue for the given channel if it contains exactly n queued messages. One of these is scheduled whenever a new message is enqueued; if more messages get added after scheduling, this is a no-op."
   ; TODO: only have one queued flush and just reset its timer when we enqueue a new message.
   [state :- TranslatorState, channel :- AnyName, n :- s/Int]
@@ -69,8 +73,8 @@
       state)))
 
 (defn enqueue :- TranslatorState
-  [state :- TranslatorState, channel :- AnyName, msg :- s/Str]
-  (update-in state [:cache channel :sendq]
+  [state :- TranslatorState, channel :- AnyName, msg :- Enqueued]
+  (update-cache state channel :sendq
     (fn [queue]
       (let [queue' (conj queue msg)
             n (count queue')]
@@ -82,3 +86,11 @@
           (Thread/sleep 4000)
           (send *agent* try-flush-queue channel n))
         queue'))))
+
+(defn enqueue-privmsg :- TranslatorState
+  [state :- TranslatorState, channel :- AnyName, msg :- s/Str]
+  (enqueue state channel [:PRIVMSG msg]))
+
+(defn enqueue-action :- TranslatorState
+  [state :- TranslatorState, channel :- AnyName, msg :- s/Str]
+  (enqueue state channel [:ACTION msg]))

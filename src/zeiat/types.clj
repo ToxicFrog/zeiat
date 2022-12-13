@@ -9,6 +9,11 @@
   "Schema for objects implementing the Zeiat backend protocol. See zeiat.backend for details."
   (s/protocol backend/ZeiatBackend))
 
+(defschema Enqueued
+  "Schema for individual sendq entries."
+  [(s/one (s/enum :PRIVMSG :ACTION) "type")
+   (s/one s/Str "payload")])
+
 (defschema CacheEntry
   {; ID of most recently seen message. Can also be the sentinel values "" for "consider all messages unread"
    ; and nil for "no data, trust the read/unread bit from the backend instead".
@@ -20,7 +25,7 @@
    ; These are not included in the outgoing count.
    ; The queue is flushed (and :outgoing incremented) when the sendq timeout expires, or
    ; immediately when a message other than PRIVMSG is sent.
-   :sendq [s/Str]})
+   :sendq [Enqueued]})
 
 (defschema TranslatorState
   "The internal state of a Zeiat translator session.

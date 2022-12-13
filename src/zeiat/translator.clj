@@ -33,7 +33,7 @@
              [n-removed displayable-messages] (filter-n-self-messages outgoing messages)]
          (run! privmsg displayable-messages)
          (log/debug "Updating last-seen value for", chat, "to", (:timestamp (last messages) last-seen), "from", last-seen)
-         (log/debug "Reducing outgoing counter for" chat "by" n-removed "currently" outgoing)
+         (log/debug "Reducing outgoing counter for" chat "by" n-removed "from" outgoing)
          (when (> n-removed outgoing)
            (log/warn chat "n-removed value greater than outgoing:" n-removed outgoing))
          ; If messages is empty, (:timestamp (last messages)) is nil, so in that case
