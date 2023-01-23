@@ -62,6 +62,7 @@
   [socket :- Socket, backend :- ZeiatBackend]
   (let [agent (agent {:socket socket
                       :backend backend
+                      :poll-interval 5000
                       :name nil :user nil :realname nil :pass nil
                       :channels #{}
                       :cache {}

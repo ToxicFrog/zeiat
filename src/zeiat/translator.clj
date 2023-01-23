@@ -80,8 +80,8 @@
 ; this needs (and doesn't have yet) a proper design to handle the fact that the state will need to be split across these
 ; agents and stuff...it's going to be tricky.
 (defn- poll
-  [{:keys [backend socket] :as state}]
-  (if (.isClosed socket)
+  [{:keys [backend socket poll-interval] :as state}]
+  (if (or (= 0 poll-interval) (.isClosed socket))
     (do (log/trace "poll thread exiting") state)
     (do
       (log/trace "polling for new messages...")
@@ -98,7 +98,7 @@
              (send *agent* (fn message-fetcher [state chats]
                              (let [state' (fetch-new-messages state chats)]
                                (log/trace "poll complete, scheduling next poll")
-                               (future (Thread/sleep 5000) (send *agent* poll))
+                               (future (Thread/sleep poll-interval) (send *agent* poll))
                                state'))))
         (reduce
           (fn [state [name last-seen]]

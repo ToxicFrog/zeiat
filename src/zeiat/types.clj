@@ -43,6 +43,8 @@
    :reader (s/pred future?)
    ; Backend object, implementation-dependent
    :backend ZeiatBackend
+   ; How often Zeiat should trigger polls on the backend, 0 to disable
+   :poll-interval s/Int
    ; Information about the state of the IRC client starts here.
    ; NICK/USER information -- used when generating PRIVMSG/JOIN events. Set once
    ; on connection and then fixed in place.
