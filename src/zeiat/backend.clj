@@ -143,8 +143,8 @@
   ([this :- Backend]
    (.listChatStatus this)))
 
-(defn stat-channel :- (s/maybe Channel)
-  [this :- Backend, channel :- ChannelName]
+(defn stat-channel :- (s/maybe Chat)
+  [this :- Backend, channel :- AnyName]
   (.statChannel this channel))
 
 (defn read-messages :- [Message]
