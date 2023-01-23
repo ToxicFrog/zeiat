@@ -79,6 +79,12 @@
 (defschema Replier
   (s/=> s/Any [s/Str]))
 
+(defn running? :- s/Bool
+  [agent :- TranslatorAgent]
+  (and
+    (realized? (:reader @agent))
+    (not (.isClosed (:socket @agent)))))
+
 (defn run :- [TranslatorAgent]
   "Open a listen socket and loop accepting clients from it and creating a new Zeiat instance for each client. Continues until the socket is closed, then returns a seq of all still-connected clients."
   [listen-port :- s/Int, make-backend :- (s/=> ZeiatBackend Replier)]
@@ -87,11 +93,8 @@
     (loop [clients []]
       (if (not (.isClosed sock))
         (recur
-          ; TODO: once we can detect dead clients, we should filter them from the list here
-          ; so they don't endlessly pile up.
-          (conj clients (create (.accept sock) (make-backend backend-replier))))
+          (conj
+            (filter running? clients)
+            (create (.accept sock) (make-backend backend-replier))))
         clients))))
 
-(defn running? :- s/Bool
-  [agent :- TranslatorAgent]
-  (realized? (:reader @agent)))
