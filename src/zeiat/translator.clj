@@ -85,10 +85,10 @@
 (declare poll)
 
 (defn- fetch-new-and-queue-next-poll
-  [{:keys [poll-interval] :as state} chats]
+  [{:keys [options] :as state} chats]
   (let [state' (fetch-new-messages state chats)]
     (log/trace "poll complete, scheduling next poll")
-    (future (Thread/sleep poll-interval) (send *agent* poll))
+    (future (Thread/sleep (:poll-interval options)) (send *agent* poll))
     state'))
 
 ; TODO: we probably want two agents:
@@ -98,8 +98,8 @@
 ; this needs (and doesn't have yet) a proper design to handle the fact that the state will need to be split across these
 ; agents and stuff...it's going to be tricky.
 (defn- poll
-  [{:keys [backend socket poll-interval] :as state}]
-  (if (or (= 0 poll-interval) (.isClosed socket))
+  [{:keys [backend socket options] :as state}]
+  (if (or (nil? (:poll-interval options)) (.isClosed socket))
     (do (log/trace "poll thread exiting") state)
     (do
       (log/trace "polling for new messages...")

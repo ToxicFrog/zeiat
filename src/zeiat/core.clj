@@ -7,7 +7,7 @@
     [zeiat.ircd.core :as ircd-core]
     [zeiat.translator :as translator]
     [zeiat.backend :as backend]
-    [zeiat.types :refer [TranslatorAgent TranslatorState ZeiatBackend]]
+    [zeiat.types :refer [TranslatorAgent TranslatorState ZeiatBackend ZeiatOptions]]
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [taoensso.timbre :as log])
   (:import
@@ -55,10 +55,10 @@
 
 (defn create :- TranslatorAgent
   "Create a translator agent using the given socket (already connected to an IRC client) and backend instance."
-  [socket :- Socket, backend :- ZeiatBackend]
+  [socket :- Socket, backend :- ZeiatBackend, options :- ZeiatOptions]
   (let [agent (agent {:socket socket
                       :backend backend
-                      :poll-interval 5000
+                      :options options
                       :name nil :user nil :realname nil :pass nil
                       :channels #{}
                       :cache {}
@@ -87,14 +87,15 @@
 
 (defn run :- [TranslatorAgent]
   "Open a listen socket and loop accepting clients from it and creating a new Zeiat instance for each client. Continues until the socket is closed, then returns a seq of all still-connected clients."
-  [listen-port :- s/Int, make-backend :- (s/=> ZeiatBackend Replier)]
-  (let [sock (ServerSocket. listen-port)]
+  ([listen-port :- s/Int, make-backend :- (s/=> ZeiatBackend Replier)]
+   (run listen-port make-backend {:poll-interval 5000}))
+  ([listen-port :- s/Int, make-backend :- (s/=> ZeiatBackend Replier), options :- ZeiatOptions]
+   (let [sock (ServerSocket. listen-port)]
     (log/info "Listening for connections on port" listen-port)
     (loop [clients []]
       (if (not (.isClosed sock))
         (recur
           (conj
             (filter running? clients)
-            (create (.accept sock) (make-backend backend-replier))))
-        clients))))
-
+            (create (.accept sock) (make-backend backend-replier options))))
+        clients)))))

@@ -27,6 +27,11 @@
    ; immediately when a message other than PRIVMSG is sent.
    :sendq [Enqueued]})
 
+(defschema ZeiatOptions
+  "Schema for Zeiat per-connection configuration."
+  { ; Wait time between polls (ms). 0 means start the next poll immediately. Nil disables; the backend will initiate polls.
+    (s/optional-key :poll-interval) s/Int})
+
 (defschema TranslatorState
   "The internal state of a Zeiat translator session.
   Structurally, a Zeiat session consists of:
@@ -43,8 +48,8 @@
    :reader (s/pred future?)
    ; Backend object, implementation-dependent
    :backend ZeiatBackend
-   ; How often Zeiat should trigger polls on the backend, 0 to disable
-   :poll-interval s/Int
+   ; Per-connection settings
+   :options ZeiatOptions
    ; Information about the state of the IRC client starts here.
    ; NICK/USER information -- used when generating PRIVMSG/JOIN events. Set once
    ; on connection and then fixed in place.
