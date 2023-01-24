@@ -44,6 +44,7 @@
            ; TODO: (last messages) doesn't always work here because some backends (e.g. discord) send messages out-of-order
            ; in ways that still read reasonably but mean that the last message isn't always the one with the highest TS
            ; we should instead select the max timestamp from the messages we fetched
+           ; probably something like: (last (sort (map :timestamp messages)))
            :last-seen (:timestamp (last messages) last-seen)
            :outgoing (max 0 (- outgoing n-removed))))))
 
@@ -73,6 +74,23 @@
       ; Finally, if we do have a cache entry *and* the backend returned something we can compare it to, do so.
       :else (not= last-seen (:last-seen chat)))))
 
+(defn- only-cache-update?
+  "Given a chat-status struct, return true if we should use this to update the cache but don't need to do anything else with it."
+  [state chat-status]
+  (and
+    (:last-seen chat-status)
+    (= :read (:status chat-status))
+    (nil? (statelib/read-cache state (:name chat-status)))))
+
+(declare poll)
+
+(defn- fetch-new-and-queue-next-poll
+  [{:keys [poll-interval] :as state} chats]
+  (let [state' (fetch-new-messages state chats)]
+    (log/trace "poll complete, scheduling next poll")
+    (future (Thread/sleep poll-interval) (send *agent* poll))
+    state'))
+
 ; TODO: we probably want two agents:
 ; - a frontend agent that sends and recieves IRC messages and manages the sendq. Messages that can be replied to without
 ;   involving the backend will be. Messages that need to go to the backend get sent off with agent messages.
@@ -86,20 +104,19 @@
     (do
       (log/trace "polling for new messages...")
       (let [statii (backend/list-chat-status backend)
+            ; Build the list of updates to the channel status cache. This is initially
+            ; the list of channels that have :last-seen, are marked read, and which
+            ; have cache misses -- the cache will be initialized with the :last-seen
+            ; we get from the backend here.
             updates (->> statii
-                         (filter :last-seen)
-                         (filter #(-> % :status (= :read)))
-                         (filter #(-> state (statelib/read-cache (:name %)) :last-seen nil?))
-                         (map (fn [info] [(:name info) (:last-seen info)])))]
+                         (filter (partial only-cache-update? state))
+                         (map (juxt :name :last-seen)))]
         (->> statii
-             (filter (partial interesting? state))
-             (filter (partial unread? state))
-             ;(map :name)
-             (send *agent* (fn message-fetcher [state chats]
-                             (let [state' (fetch-new-messages state chats)]
-                               (log/trace "poll complete, scheduling next poll")
-                               (future (Thread/sleep poll-interval) (send *agent* poll))
-                               state'))))
+             (filter (every-pred (partial interesting? state) (partial unread? state)))
+             ; Queue up a task on the agent that will run after this task completes,
+             ; fetching all the new messages and then spawning a future that will in turn
+             ; spawn the next poll.
+             (send *agent* fetch-new-and-queue-next-poll))
         (reduce
           (fn [state [name last-seen]]
             (log/debug "Recording initial last-seen value of" last-seen "for" name)

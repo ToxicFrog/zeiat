@@ -12,6 +12,10 @@ Create an implementation of the `zeiat.backend/ZeiatBackend` protocol and pass i
 
 TODO: write better documentation.
 
+`run` will run until the socket is closed, then return a list of still-connected clients.
+
+For every connection opened, it will call the `create` function passed to `run`, passing it one argument, `reply-fn`. It should return an instance of `ZeiatBackend`.
+
 ## License
 
 Copyright © 2021 Rebecca "ToxicFrog" Kelly
