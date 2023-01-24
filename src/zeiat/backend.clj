@@ -29,8 +29,8 @@
    :host UserName
    :realname s/Str
    ; Backend can store whatever additional information here is convenient
-   s/Any s/Any
-   })
+   s/Any s/Any})
+
 
 (defschema Channel
   "Channel metadata returned by listChannels, listUnread, and statChannel."
@@ -49,8 +49,8 @@
    ; etc. If you can't get anything just send the empty string.
    :topic s/Str
    ; Backend can store whatever additional information here is convenient
-   s/Any s/Any
-   })
+   s/Any s/Any})
+
 
 (defschema Chat
   "Something that can send and receive messages, i.e. either a User or a Channel."
@@ -81,8 +81,8 @@
    :text s/Str
    ; Backend can store whatever additional information here is convenient, e.g.
    ; timestamps, the original HTML, whatever.
-   s/Any s/Any
-   })
+   s/Any s/Any})
+
 
 (defschema ChatStatus
   "Status information for a chat (a channel or DM).
