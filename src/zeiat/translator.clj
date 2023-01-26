@@ -82,14 +82,32 @@
     (= :read (:status chat-status))
     (nil? (statelib/read-cache state (:name chat-status)))))
 
-(declare poll)
+(defn update-cache-entry
+  [state [name last-seen]]
+  (log/debug "Recording initial last-seen value of" last-seen "for" name)
+  (statelib/write-cache state name :last-seen last-seen))
 
-(defn- fetch-new-and-queue-next-poll
-  [{:keys [options] :as state} chats]
-  (let [state' (fetch-new-messages state chats)]
-    (log/trace "poll complete, scheduling next poll")
-    (future (Thread/sleep (:poll-interval options)) (send *agent* poll))
-    state'))
+
+(defn- update-last-seen-cache
+  [state potential-updates]
+  (->> potential-updates
+    ; Only process updates where we only need to update the cache, not also
+    ; fetch new messages.
+    ; In practice this means channels that:
+    ; - have a timestamp from the backend
+    ; - have no new messages, according to the backend
+    ; - and for which we have no existing cache entry.
+    (filter (partial only-cache-update? state))
+    ; convert to seq of [name timestamp] pairs
+    (map (juxt :name :last-seen))
+    (reduce update-cache-entry state)))
+
+(defn- fetch-new
+  [state chats]
+  (fetch-new-messages state
+    (filter (every-pred (partial interesting? state)
+             (partial unread? state))
+            chats)))
 
 ; TODO: we probably want two agents:
 ; - a frontend agent that sends and recieves IRC messages and manages the sendq. Messages that can be replied to without
@@ -97,32 +115,22 @@
 ; - a backend agent that does polling of the backend and handles communication with it
 ; this needs (and doesn't have yet) a proper design to handle the fact that the state will need to be split across these
 ; agents and stuff...it's going to be tricky.
-(defn- poll
-  [{:keys [backend socket options] :as state}]
+(defn poll-once
+  [{:keys [backend] :as state}]
+  (log/trace "polling for new messages...")
+  (let [chats (backend/list-chat-status backend)]
+    (-> state
+      (update-last-seen-cache chats)
+      (fetch-new chats))))
+
+(defn- poll-repeatedly
+  [{:keys [options socket] :as state}]
   (if (or (nil? (:poll-interval options)) (.isClosed socket))
     (do (log/trace "poll thread exiting") state)
-    (do
-      (log/trace "polling for new messages...")
-      (let [statii (backend/list-chat-status backend)
-            ; Build the list of updates to the channel status cache. This is initially
-            ; the list of channels that have :last-seen, are marked read, and which
-            ; have cache misses -- the cache will be initialized with the :last-seen
-            ; we get from the backend here.
-            updates (->> statii
-                         (filter (partial only-cache-update? state))
-                         (map (juxt :name :last-seen)))]
-        (->> statii
-             (filter (every-pred (partial interesting? state) (partial unread? state)))
-             ; Queue up a task on the agent that will run after this task completes,
-             ; fetching all the new messages and then spawning a future that will in turn
-             ; spawn the next poll.
-             (send *agent* fetch-new-and-queue-next-poll))
-        (reduce
-          (fn [state [name last-seen]]
-            (log/debug "Recording initial last-seen value of" last-seen "for" name)
-            (statelib/write-cache state name :last-seen last-seen))
-          state updates)))))
-
+    (let [state' (poll-once state)]
+      (log/trace "poll complete, scheduling next poll")
+      (future (Thread/sleep (:poll-interval options)) (send *agent* poll-repeatedly))
+      state')))
 
 (defn connect! :- s/Str
   "Called when user registration completes successfully. Should connect to the backend. Returns the info string provided by the backend."
@@ -130,7 +138,7 @@
   (let [user (assoc (select-keys state [:name :user :realname :pass])
                :host (.. (:socket state) getInetAddress getCanonicalHostName))
         welcome (backend/connect (:backend state) user)]
-    (poll state)
+    (poll-repeatedly state)
     welcome))
 
 ; TODO on SIGINT we don't reliably shut down the backend, which can e.g. leave

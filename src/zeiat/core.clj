@@ -46,38 +46,34 @@
           (log/error e "Error reading from socket" socket "shutting down this client.")
           (send agent translator/shutdown! "client socket closed"))))))
 
-(defn ^:private backend-replier :- s/Any
-  "Called by the backend when it needs to send data to the IRC client directly, e.g. numerics detailing additional connection steps. Same behaviour as ircd.core/reply.
-  Note that it is assumed to be called from 'inside' the agent for that backend, so (a) it implicitly depends on *agent* and (b) the message goes on the wire immediately rather than going into the agent queue."
-  [& fields]
-  (binding [ircd-core/*state* @*agent*]
-    (apply ircd-core/reply fields)))
+(defschema BackendConstructor
+  "Schema for functions passed to core/run to create new ZeiatBackend instances appropriate to the host program. It will be called with the Agent that backend will be owned by and should return an implementation of ZeiatBackend. See backend.clj for the protocol and related schemas."
+  (s/=> ZeiatBackend
+    clojure.lang.Agent))
 
 (defn create :- TranslatorAgent
   "Create a translator agent using the given socket (already connected to an IRC client) and backend instance."
-  [socket :- Socket, backend :- ZeiatBackend, options :- ZeiatOptions]
+  [socket :- Socket, make-backend :- BackendConstructor, options :- ZeiatOptions]
   (let [agent (agent {:socket socket
-                      :backend backend
                       :options options
                       :name nil :user nil :realname nil :pass nil
                       :channels #{}
                       :cache {}
                       :writer (-> socket io/writer (PrintWriter. true))}
-                ; We do not install the validator here because we can't create the :reader field
+                ; We do not install the validator here because we can't create the :reader or :backend
                 ; until after the agent has been created; so instead we partially create the agent
                 ; state here, then finish creating it in initialize-agent, which also installs
                 ; the validator.
                 :error-mode :fail
                 :error-handler handle-agent-error)]
     (log/trace "Creating translator agent:", agent)
-    (send agent assoc :reader (make-reader socket agent))
+    (send agent assoc
+      :backend (make-backend agent)
+      :reader (make-reader socket agent))
     (send agent (fn [state]
                   (set-validator! agent (s/validator TranslatorState))
                   state))
     (send agent translator/startup!)))
-
-(defschema Replier
-  (s/=> s/Any [s/Str]))
 
 (defn running? :- s/Bool
   [agent :- TranslatorAgent]
@@ -87,9 +83,9 @@
 
 (defn run :- [TranslatorAgent]
   "Open a listen socket and loop accepting clients from it and creating a new Zeiat instance for each client. Continues until the socket is closed, then returns a seq of all still-connected clients."
-  ([listen-port :- s/Int, make-backend :- (s/=> ZeiatBackend Replier)]
+  ([listen-port :- s/Int, make-backend :- BackendConstructor]
    (run listen-port make-backend {:poll-interval 5000}))
-  ([listen-port :- s/Int, make-backend :- (s/=> ZeiatBackend Replier), options :- ZeiatOptions]
+  ([listen-port :- s/Int, make-backend :- BackendConstructor, options :- ZeiatOptions]
    (let [sock (ServerSocket. listen-port)]
     (log/info "Listening for connections on port" listen-port)
     (loop [clients []]
@@ -97,5 +93,33 @@
         (recur
           (conj
             (filter running? clients)
-            (create (.accept sock) (make-backend backend-replier options))))
+            (create (.accept sock) make-backend options)))
         clients)))))
+
+;; API used by ZeiatBackend instances to communicate with the zeiat core
+
+; we have a problem here in that poll needs to be callable from outside the *agent* for the intended
+; use cases to work. This means the backend needs some way of getting the agent to which it is bound.
+; but we don't have the agent until after the backend is created.
+; I think the solution here is:
+; - pass make-backend to create
+; - create creates the agent containing a skeleton (as it does now) which is missing :backend
+; - it then calls (create-backend agent) and stuffs that into :backend
+; - then it does the reader assoc and other startup stuff it already does now
+(defn poll
+  "Queue a poll cycle to be executed on the given agent as soon as it's free. The agent will call .listChatStatus to get status info and .readMessagesSince to read any new messages that have arrived, then forward them to the client.
+
+  Note that this will not schedule an automatic, recurring poll. To do that set the :poll-interval option when calling run."
+  [agent]
+  (send agent translator/poll-once))
+
+(defn reply-now
+  "Send a reply to the client immediately. This must be called from inside the agent, i.e. inside one of the ZeiatBackend implementation functions after it's been called from Zeiat itself. The message goes on the wire as soon as this is called rather than waiting for the agent to be free."
+  [& fields]
+  (binding [ircd-core/*state* @*agent*]
+    (apply ircd-core/reply fields)))
+
+(defn reply
+  "Queue a reply to the client. Rest arguments are the same as zeiat.ircd.core/reply. The reply will be sent next time the agent is free."
+  [agent & fields]
+  (apply send agent reply-now fields))
