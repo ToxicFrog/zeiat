@@ -3,6 +3,7 @@
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
     [zeiat.backend :as backend]
+    #_{:clj-kondo/ignore [:unused-referred-var]}
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]))
 
 (defschema ZeiatBackend

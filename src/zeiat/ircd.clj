@@ -9,6 +9,7 @@
     [zeiat.ircd.messages]
     [zeiat.ircd.list]
     [taoensso.timbre :as log]
+    #_{:clj-kondo/ignore [:unused-referred-var]}
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [clojure.string :as string]
     ))

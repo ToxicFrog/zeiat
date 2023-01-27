@@ -6,8 +6,8 @@
     [zeiat.ircd :as ircd]
     [zeiat.ircd.core :as ircd-core]
     [zeiat.translator :as translator]
-    [zeiat.backend :as backend]
     [zeiat.types :refer [TranslatorAgent TranslatorState ZeiatBackend ZeiatOptions]]
+    #_{:clj-kondo/ignore [:unused-referred-var]}
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [taoensso.timbre :as log])
   (:import
@@ -40,6 +40,8 @@
       (try
         (doseq [line (reader-seq reader)]
           (apply send agent
+            ; the aliasing of dispatch-message into ircd/core confuses it
+            #_{:clj-kondo/ignore [:unresolved-var]}
             ircd/dispatch-message (ircd/parse-line line)))
         (log/trace "socket closed, gbye")
         (catch Exception e

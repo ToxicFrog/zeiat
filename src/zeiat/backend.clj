@@ -2,6 +2,7 @@
   "Schema and protocol definitions for Zeiat backends. If implementing a new backend, you should start here."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
+    #_{:clj-kondo/ignore [:unused-referred-var]}
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [clojure.string :as string]))
 
@@ -123,10 +124,13 @@
 (defschema ^:private Backend (s/protocol ZeiatBackend))
 
 ;; Functions for checked calls to backend impls
+; The defschema above confuses kondo, so disable linting here
+#_{:clj-kondo/ignore [:redefined-var]}
 (defn connect :- s/Str
   [this :- Backend, user :- User]
   (.connect this user))
 
+#_{:clj-kondo/ignore [:redefined-var]}
 (defn disconnect
   [this :- Backend]
   (.disconnect this))

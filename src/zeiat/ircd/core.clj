@@ -4,6 +4,7 @@
   (:require
     [clojure.string :as string]
     [zeiat.types :refer [TranslatorState]]
+    #_{:clj-kondo/ignore [:unused-referred-var]}
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [taoensso.timbre :as log]))
 
@@ -52,7 +53,7 @@
     (-> command string/upper-case keyword)))
 
 (defmethod message :default
-  [command & rest]
+  [command & _rest]
   (reply 421 "*" command "Unrecognized command"))
 
 (defn dispatch-message
