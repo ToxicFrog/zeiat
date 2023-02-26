@@ -58,6 +58,7 @@
   [socket :- Socket, make-backend :- BackendConstructor, options :- ZeiatOptions]
   (let [agent (agent {:socket socket
                       :options options
+                      :userdata {}
                       :name nil :user nil :realname nil :pass nil
                       :channels #{}
                       :cache {}
@@ -75,6 +76,12 @@
     (send agent (fn [state]
                   (set-validator! agent (s/validator TranslatorState))
                   state))
+    ;; (send agent (fn [state]
+    ;;                 (set-validator! agent
+    ;;                  (fn [state]
+    ;;                   (log/trace "agent updated:" agent *agent* "to" state)
+    ;;                   ((s/validator TranslatorState) state)))
+    ;;                 state))
     (send agent translator/startup!)))
 
 (defn running? :- s/Bool
@@ -112,8 +119,10 @@
   "Queue a poll cycle to be executed on the given agent as soon as it's free. The agent will call .listChatStatus to get status info and .readMessagesSince to read any new messages that have arrived, then forward them to the client.
 
   Note that this will not schedule an automatic, recurring poll. To do that set the :poll-interval option when calling run."
-  [agent]
-  (send agent translator/poll-once))
+  [agent continuation]
+  (log/trace "Scheduling poll of agent" agent)
+  (when (not (agent-error agent))
+    (send-off agent translator/poll-once continuation)))
 
 (defn reply-now
   "Send a reply to the client immediately. This must be called from inside the agent, i.e. inside one of the ZeiatBackend implementation functions after it's been called from Zeiat itself. The message goes on the wire as soon as this is called rather than waiting for the agent to be free."

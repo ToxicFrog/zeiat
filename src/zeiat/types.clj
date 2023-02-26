@@ -31,7 +31,7 @@
 (defschema ZeiatOptions
   "Schema for Zeiat per-connection configuration."
   { ; Wait time between polls (ms). 0 means start the next poll immediately. Nil disables; the backend will initiate polls.
-    (s/optional-key :poll-interval) s/Int})
+    (s/optional-key :poll-interval) (s/maybe s/Int)})
 
 (defschema TranslatorState
   "The internal state of a Zeiat translator session.
@@ -41,7 +41,7 @@
   - a thread that periodically reminds the agent to check the backend for new messages
   "
   {; Connection to the IRC client; read by the reader thread, written by the agent.
-   :socket java.net.Socket
+   :socket (s/maybe java.net.Socket)
    ; Writer wrapped around the socket so we can println to it.
    :writer (s/pred (partial instance? java.io.Writer))
    ; A future backed by the reader thread. When the reader thread exits, this will
@@ -51,6 +51,8 @@
    :backend ZeiatBackend
    ; Per-connection settings
    :options ZeiatOptions
+   ; Per-connection user-provided data.
+   :userdata {s/Any s/Any}
    ; Information about the state of the IRC client starts here.
    ; NICK/USER information -- used when generating PRIVMSG/JOIN events. Set once
    ; on connection and then fixed in place.

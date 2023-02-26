@@ -117,27 +117,37 @@
 ; this needs (and doesn't have yet) a proper design to handle the fact that the state will need to be split across these
 ; agents and stuff...it's going to be tricky.
 (defn poll-once
-  [{:keys [backend] :as state}]
+  "Poll the given state for new messages once, then call the continuation and return the new state."
+  [{:keys [backend] :as state} continuation]
   (log/trace "polling for new messages...")
-  (let [chats (backend/list-chat-status backend)]
-    (-> state
-      (update-last-seen-cache chats)
-      (fetch-new chats))))
+  ; these can emit messages back to IRC, so we need to set the binding properly.
+  (binding [zeiat.ircd.core/*state* state]
+    (let [chats (backend/list-chat-status backend)
+          state' (-> state
+                   (update-last-seen-cache chats)
+                   (fetch-new chats))]
+      (statelib/save-cache! state)
+      (continuation)
+      state')))
 
 (defn- poll-repeatedly
   [{:keys [options socket] :as state}]
   (if (or (nil? (:poll-interval options)) (.isClosed socket))
     (do (log/trace "poll thread exiting") state)
-    (let [state' (poll-once state)]
-      (log/trace "poll complete, scheduling next poll")
-      (future (Thread/sleep (:poll-interval options)) (send *agent* poll-repeatedly))
-      state')))
+    (poll-once state
+      (fn []
+        (log/trace "poll complete, scheduling next poll")
+        (let [me *agent*]
+          (future
+            (Thread/sleep (:poll-interval options))
+            (send me poll-repeatedly)))))))
 
 (defn connect! :- s/Str
   "Called when user registration completes successfully. Should connect to the backend. Returns the info string provided by the backend."
   [state :- TranslatorState]
   (let [user (assoc (select-keys state [:name :user :realname :pass])
                :host (.. (:socket state) getInetAddress getCanonicalHostName))
+        state (statelib/load-cache state)
         welcome (backend/connect (:backend state) user)]
     (poll-repeatedly state)
     welcome))
@@ -148,9 +158,14 @@
   ([state]
    (shutdown! state "(no reason given)"))
   ([{:keys [socket writer backend] :as state} :- TranslatorState, reason :- s/Str]
-   (log/info "Shutting down translator:" socket "because:" reason)
-   (when (not (.isClosed socket))
-     (.println writer (str ":Zeiat ERROR :" reason))
-     (.close socket))
-   (backend/disconnect backend)
-   state))
+   (when socket
+    (log/info "Shutting down translator:" socket "because:" reason)
+    ; Problem here is that closing the socket causes the reader to freak out and
+    ; call shutdown! again, which double-calls disconnect on the backend, which
+    ; not all backends cope with well.
+    ; TODO: fix this
+    (when (not (.isClosed socket))
+      (.println writer (str ":Zeiat ERROR :" reason))
+      (.close socket))
+    (backend/disconnect backend)
+    (dissoc state :socket))))

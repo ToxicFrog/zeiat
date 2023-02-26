@@ -5,8 +5,9 @@
     [zeiat.ircd.core :as ircd :refer [message *state* reply-from numeric]]
     [zeiat.translator :as translator]
     [zeiat.types :refer [TranslatorState]]
-    [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
-    ))
+    #_{:clj-kondo/ignore [:unused-referred-var]}
+    [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]))
+
 
 ;;; Client Management
 
