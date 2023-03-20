@@ -2,12 +2,16 @@
   "Convenience functions for manipulating the TranslatorState internals."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
+    [clojure.edn :as edn]
+    [clojure.java.io :as io]
     [clojure.string :as string]
     [schema.core :as s :refer [def defn defmethod defrecord defschema fn letfn]]
     [taoensso.timbre :as log]
     [zeiat.backend :as backend :refer [AnyName]]
     [zeiat.ircd.core :as ircd]
-    [zeiat.types :refer [TranslatorState CacheEntry Enqueued]]))
+    [zeiat.types :refer [TranslatorState CacheEntry Enqueued]])
+  (:import
+    [dev.dirs ProjectDirectories]))
 
 (defn has-cache? :- s/Bool
   [state :- TranslatorState, channel :- AnyName]
@@ -31,11 +35,32 @@
       (read-cache state channel)
       (apply assoc nil rest))))
 
-; TODO: this is duplicated between here and ircd/messages
-(defn- reply-missing [target]
-  (if (= \# (first target))
-    (ircd/numeric 403 target "No such channel")
-    (ircd/numeric 401 target "No such user")))
+(defn- find-cache
+  "Returns a jio.File pointing to the cache file for this state, if it has a :cache-key. If it does not, returns nil. Note that the cache is not guaranteed to exist!"
+  [state]
+  (when-let [key (-> state :options :cache-key)]
+    (io/file
+      (.-cacheDir (ProjectDirectories/from "ca" "ancilla" "zeiat"))
+      (str key ".edn"))))
+
+(defn save-cache
+  "Writes the last-seen cache for the given state to disk, at a location automatically computed from its user info."
+  [state :- TranslatorState]
+  (when-let [file (find-cache state)]
+    (log/trace "Writing cache to" file "with value" (state :cache))
+    (io/make-parents (.getPath file))
+    (->> state :cache pr-str (spit (.getPath file))))
+  state)
+
+(defn load-cache
+  "Loads the last-seen cache from a file previously written by save-cache! and returns a new state with the cache loaded. If the file does not yet exist, behaves as identity."
+  [state :- TranslatorState]
+  (let [file (find-cache state)]
+    (if (and file (.exists file))
+      (let [cache (->> file slurp edn/read-string)]
+        (log/trace "Reading cache from" file "with value" cache)
+        (assoc state :cache (update-vals cache #(assoc % :outgoing 0))))
+      state)))
 
 (defn send-partition :- s/Num
   [state :- TranslatorState, channel :- AnyName, partition :- [Enqueued]]

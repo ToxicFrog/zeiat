@@ -11,9 +11,9 @@
     [taoensso.timbre :as log]))
 
 (defn startup! :- TranslatorState
-  "Called when the translator is created. Currently a no-op."
+  "Called when the translator is created. Loads the cache, if one is configured."
   [state :- TranslatorState]
-  state)
+  (statelib/load-cache state))
 
 (defn- filter-n-self-messages
   [n messages]
@@ -31,10 +31,12 @@
        (log/trace "fetch-new-messages" chat (:last-seen state))
        (let [{:keys [last-seen outgoing]} (statelib/read-cache state chat)
              messages (backend/read-messages-since (:backend state) chat last-seen)
-             [n-removed displayable-messages] (filter-n-self-messages outgoing messages)]
+             [n-removed displayable-messages] (filter-n-self-messages outgoing messages)
+             new-ts (->> messages (map :timestamp) (filter identity) sort last)]
          (run! privmsg displayable-messages)
-         (log/debug "Updating last-seen value for", chat, "to", (:timestamp (last messages) last-seen), "from", last-seen)
-         (log/debug "Reducing outgoing counter for" chat "by" n-removed "from" outgoing)
+         (log/debug "Updating last-seen value for", chat, "to", new-ts, "from", last-seen)
+         (when (> n-removed 0)
+          (log/debug "Reducing outgoing counter for" chat "by" n-removed "from" outgoing))
          (when (> n-removed outgoing)
            (log/warn chat "n-removed value greater than outgoing:" n-removed outgoing))
          ; If messages is empty, (:timestamp (last messages)) is nil, so in that case
@@ -46,7 +48,7 @@
            ; in ways that still read reasonably but mean that the last message isn't always the one with the highest TS
            ; we should instead select the max timestamp from the messages we fetched
            ; probably something like: (last (sort (map :timestamp messages)))
-           :last-seen (:timestamp (last messages) last-seen)
+           :last-seen (or new-ts last-seen)
            :outgoing (max 0 (- outgoing n-removed))))))
 
 
@@ -126,7 +128,7 @@
           state' (-> state
                    (update-last-seen-cache chats)
                    (fetch-new chats))]
-      (statelib/save-cache! state)
+      (statelib/save-cache state)
       (continuation)
       state')))
 
@@ -147,9 +149,8 @@
   [state :- TranslatorState]
   (let [user (assoc (select-keys state [:name :user :realname :pass])
                :host (.. (:socket state) getInetAddress getCanonicalHostName))
-        state (statelib/load-cache state)
         welcome (backend/connect (:backend state) user)]
-    (poll-repeatedly state)
+    (send *agent* poll-repeatedly)
     welcome))
 
 ; TODO on SIGINT we don't reliably shut down the backend, which can e.g. leave

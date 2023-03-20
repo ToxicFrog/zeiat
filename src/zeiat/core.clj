@@ -134,3 +134,14 @@
   "Queue a reply to the client. Rest arguments are the same as zeiat.ircd.core/reply. The reply will be sent next time the agent is free."
   [agent & fields]
   (apply send agent reply-now fields))
+
+(defn set-cache-key!
+  "Set the cache key for this agent. It will queue a task on the agent that (a) records the new cache key and (b) loads the corresponding cache file, if it exists. This will overwrite the existing cache, so it is recommended this be called only once and as soon as possible; ideally, pass the cache-key into (create) or (run), but failing that, call it before your backend returns from (connect), as that is your last chance to modify the cache before the polling loop starts."
+  [cache-key]
+  (log/trace "Scheduling cache key update to" cache-key)
+  (send *agent*
+    (fn [state]
+      (log/info "Setting cache key to" cache-key "and overwriting current cache of size" (count (state :cache)))
+      (let [state' (-> state (assoc-in [:options :cache-key] cache-key) statelib/load-cache)]
+        (log/info "Loaded new cache of size" (count (state' :cache)))
+        state'))))
