@@ -31,7 +31,11 @@
 (defschema ZeiatOptions
   "Schema for Zeiat per-connection configuration."
   { ; Wait time between polls (ms). 0 means start the next poll immediately. Nil disables; the backend will initiate polls.
-    (s/optional-key :poll-interval) (s/maybe s/Int)})
+    (s/optional-key :poll-interval) (s/maybe s/Int)
+    ; Cache key for the last-seen cache. Can be set at construction, or set post
+    ; construction (e.g. based on information from the backend) by calling
+    ; zeiat.core/set-cache-key!.
+    (s/optional-key :cache-key) (s/maybe s/Str)})
 
 (defschema TranslatorState
   "The internal state of a Zeiat translator session.
