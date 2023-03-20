@@ -15,11 +15,6 @@
     (= \u0001 (first msg))
     (= \u0001 (last msg))))
 
-(defn- reply-missing [target]
-  (if (= \# (first target))
-    (numeric 403 target "No such channel")
-    (numeric 401 target "No such user")))
-
 (defn- write-ctcp
   [channel msg]
   (let [[command payload] (-> msg
@@ -52,3 +47,7 @@
       (reply-from channel "NOTICE" (:name *state*) "RECAP message received, please wait..."))
   (statelib/write-cache *state* channel
                         :last-seen ""))
+
+(defmethod message :ZEIAT:FLUSH
+  [_ channel]
+  (statelib/flush-queue *state* channel))
