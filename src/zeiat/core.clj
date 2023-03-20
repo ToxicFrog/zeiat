@@ -2,9 +2,11 @@
   "A library for connecting IRC to other protocols. Zeiat only handles the IRC frontend; it's up to you to provide a backend for it to connect to."
   (:refer-clojure :exclude [def defn defmethod defrecord fn letfn])
   (:require
+    [clojure.data]
     [clojure.java.io :as io]
     [zeiat.ircd :as ircd]
     [zeiat.ircd.core :as ircd-core]
+    [zeiat.state :as statelib]
     [zeiat.translator :as translator]
     [zeiat.types :refer [TranslatorAgent TranslatorState ZeiatBackend ZeiatOptions]]
     #_{:clj-kondo/ignore [:unused-referred-var]}
@@ -76,12 +78,15 @@
     (send agent (fn [state]
                   (set-validator! agent (s/validator TranslatorState))
                   state))
-    ;; (send agent (fn [state]
-    ;;                 (set-validator! agent
-    ;;                  (fn [state]
-    ;;                   (log/trace "agent updated:" agent *agent* "to" state)
-    ;;                   ((s/validator TranslatorState) state)))
-    ;;                 state))
+    (add-watch agent :trace-watcher
+      (fn [_key _agent state state']
+        (let [[removed added _] (clojure.data/diff state state')]
+          (when (or removed added)
+            (log/trace "Agent updated:" (state :name)))
+          (when removed
+            (log/trace "-" removed))
+          (when added
+            (log/trace "+" added)))))
     (send agent translator/startup!)))
 
 (defn running? :- s/Bool
@@ -90,10 +95,14 @@
     (realized? (:reader @agent))
     (not (.isClosed (:socket @agent)))))
 
+(def default-options
+  {:poll-interval 5000
+   :cache-key nil})
+
 (defn run :- [TranslatorAgent]
   "Open a listen socket and loop accepting clients from it and creating a new Zeiat instance for each client. Continues until the socket is closed, then returns a seq of all still-connected clients."
   ([listen-port :- s/Int, make-backend :- BackendConstructor]
-   (run listen-port make-backend {:poll-interval 5000}))
+   (run listen-port make-backend {}))
   ([listen-port :- s/Int, make-backend :- BackendConstructor, options :- ZeiatOptions]
    (let [sock (ServerSocket. listen-port)]
     (log/info "Listening for connections on port" listen-port)
@@ -102,7 +111,7 @@
         (recur
           (conj
             (filter running? clients)
-            (create (.accept sock) make-backend options)))
+            (create (.accept sock) make-backend (merge default-options options))))
         clients)))))
 
 ;; API used by ZeiatBackend instances to communicate with the zeiat core
