@@ -13,7 +13,7 @@
             [lein-ancient "0.6.15"]
             [lein-changelog "0.3.2"]]
   :middleware [io.aviso.lein-pretty/inject]
-  :profiles {:dev {:dependencies [[org.clojure/clojure "1.10.0"]
+  :profiles {:dev {:dependencies [[org.clojure/clojure "1.11.0"]
                                   [io.aviso/pretty "1.1"]
                                   ]}
              :aot {:aot :all}}
