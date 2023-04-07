@@ -29,6 +29,11 @@
       ; We send 001 immediately so the client doesn't time out while waiting for
       ; connect! to return, which may take quite some time depending on the backend.
       (numeric 1 "Welcome to the Zeiat IRC relay.")
+      ; TODO: we have a bug here where weechat will start sending JOIN messages as soon as it
+      ; sees 001 (or possibly 005) and thus they pile up in the queue while we're blocked on
+      ; translator/connect -- and then, when we return, they get processed before the cache is
+      ; loaded and a bunch of cache data gets discarded. Making this worse, some backends clear
+      ; the read bit on a channel when joining it, so some messages are just never delivered.
       (numeric 5 "CHANTYPES=# NICKLEN=64 SAFELIST MAXTARGETS=1 LINELEN=8192")
       (numeric 4 (translator/connect! state))
       (numeric 376 "End of MOTD.")))

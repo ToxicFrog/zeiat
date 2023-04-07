@@ -14,8 +14,8 @@
             [lein-changelog "0.3.2"]]
   :middleware [io.aviso.lein-pretty/inject]
   :profiles {:dev {:dependencies [[org.clojure/clojure "1.11.0"]
-                                  [io.aviso/pretty "1.1"]
-                                  ]}
+                                  [io.aviso/pretty "1.1"]]}
+
              :aot {:aot :all}}
   :deploy-repositories [["releases" :clojars]]
   :aliases {"update-readme-version" ["shell" "sed" "-i" "s/\\\\[zeiat \"[0-9.]*\"\\\\]/[zeiat \"${:version}\"]/" "README.md"]}
