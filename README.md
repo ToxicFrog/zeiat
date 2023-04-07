@@ -1,20 +1,20 @@
 # zeiat
 
-A Clojure library for wiring up IRC to other protocols. Zeiat provides an RFC2812-compatible IRC server interface; you provide a backend implementation that talks to the actual protocol.
+A Clojure library for wiring up IRC to other protocols. Zeiat provides an RFC2812-compatible IRC server interface; you provide a backend implementation that talks to the actual protocol. It is oriented towards backends that require regular polling and are not always good at differentiating between read and unread messages.
+
+⚠️ **This is not, in any sense, production-ready software.** ⚠️ It is a messy proof of concept, hacked together in a late night coding frenzy so that I could [talk to my family on googlechat](/toxicfrog/hangbrain). It has no tests, subpar documentation, and a number of exciting bugs that stem from deep-seated architectural flaws I'll need to go back and fix someday. I cannot in good conscience recommend using it, but I have published it as a learning experience. At some point -- spare time permitting, ha ha -- I want to completely redesign this, probably using core.async and ircparse.
 
 ```clj
-[zeiat "0.0.0"]
+[ca.ancilla/zeiat "0.3.0-SNAPSHOT"]
 ```
 
 ## Usage
 
-Create an implementation of the `zeiat.backend/ZeiatBackend` protocol and pass it to `zeiat.core/run` (if you want Zeiat to manage the listen socket for you) or `zeiat.core/create` (if you already have a socket connected to an IRC client). See the docstrings for those namespaces for more details.
+Implement the `zeiat.backend/ZeiatBackend` protocol somewhere. Then call `zeiat.core/run`, passing it a function that, when called, will produce `ZeiatBackend` instances; every time a new client connects and successfully completes registration, that function will be called and the `ZeiatBackend` it returns will be coupled to that IRC client.
 
-TODO: write better documentation.
+You can optionally pass an options map to `run`; `:poll-interval` determines how often zeiat polls the backend for new messages, and `:cache-key` determines where it stores the last-seen-messages cache, which is used to avoid re-sending already-seen messages after a restart.
 
-`run` will run until the socket is closed, then return a list of still-connected clients.
-
-For every connection opened, it will call the `create` function passed to `run`, passing it one argument, `reply-fn`. It should return an instance of `ZeiatBackend`.
+See [backend.clj](src/zeiat/backend.clj) for the details of the `ZeiatBackend` protocol, and [types.clj](src/zeiat/types.clj) for the Schema type declarations.
 
 ## License
 
